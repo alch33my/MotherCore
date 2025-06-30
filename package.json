@@ -2,15 +2,15 @@
   "name": "mothercore",
   "private": true,
   "version": "0.0.1",
-  "type": "module",
   "main": "dist-electron/main/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && electron-builder",
+    "build": "npm run build:preload && tsc -b && vite build && electron-builder",
+    "build:preload": "tsc -p tsconfig.preload.json",
     "preview": "vite preview",
     "lint": "eslint .",
     "start": "electron .",
-    "electron:dev": "concurrently \"npm run dev\" \"npm run electron:start\"",
+    "electron:dev": "npm run build:preload && concurrently \"npm run dev\" \"npm run electron:start\"",
     "electron:build": "vite build && electron-builder",
     "electron:start": "wait-on tcp:5173 && electron ."
   },
