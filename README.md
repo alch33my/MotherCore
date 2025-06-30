@@ -1,69 +1,87 @@
-# React + TypeScript + Vite
+# MotherCore: Digital Library Application
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## 🚀 Project Overview
 
-Currently, two official plugins are available:
+MotherCore is a stunning, portable desktop notes library application with a Matrix-inspired cyberpunk aesthetic. Built with Electron, React, and TypeScript, it provides a powerful, local-first knowledge management solution.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🛠 Technology Stack
 
-## Expanding the ESLint configuration
+- **Framework**: Electron + React + TypeScript
+- **UI**: Tailwind CSS, Shadcn UI
+- **Database**: SQLite (better-sqlite3)
+- **State Management**: Zustand
+- **Authentication**: bcryptjs
+- **Graphics**: Three.js
+- **Build Tool**: Vite
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## ✨ Key Features
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- 🔒 Secure local authentication
+- 📚 Hierarchical note organization
+- 🌈 Matrix-inspired digital rain background
+- 💾 Local file storage and backup
+- 🖥️ Portable desktop application
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+## 🏁 Getting Started
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Prerequisites
+
+- Node.js (18.0.0+)
+- npm or pnpm
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/mothercore.git
+
+# Navigate to project directory
+cd mothercore
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run electron:dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Building for Production
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+# Build the application
+npm run electron:build
 ```
+
+## 🔧 Development Scripts
+
+- `npm run dev`: Start development server
+- `npm run build`: Build for production
+- `npm run electron:dev`: Start Electron development
+- `npm run electron:build`: Build Electron application
+
+## 🔒 Security
+
+- Local-only data storage
+- AES-256 encryption for sensitive data
+- Secure password hashing
+- No telemetry or external communications
+
+## 📋 Roadmap
+
+- [ ] Full note management system
+- [ ] 3D library visualization
+- [ ] Advanced search capabilities
+- [ ] Export and backup features
+- [ ] Plugin architecture
+
+## 🤝 Contributing
+
+Contributions are welcome! Please read our contributing guidelines before getting started.
+
+## 📄 License
+
+[Your License Here]
+
+## 📞 Contact
+
+[Your Contact Information]
