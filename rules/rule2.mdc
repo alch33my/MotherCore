@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+- DO NOT EVER USE MOCK DATA ONLY BUILD REAL CONNECTIONS

@@ -1,0 +1,15 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+- ALWAYS generate code directly into intended files
+- ALWAYS ask for intended file if not given 
+- ALWAYS use functional code 
+
+
+- Keep answers concise and direct
+- Suggest alternative solutions
+- Avoid unnecessary explanations
+- Prioritize technical details over generic advice
+- always make edits directly in the file editor and not the chat
