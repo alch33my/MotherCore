@@ -1,11 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, ChevronDown, Plus, Users, Book, Search, Settings, Download } from 'lucide-react';
+import { 
+  ChevronRight, 
+  ChevronDown, 
+  Plus, 
+  Users, 
+  Book, 
+  Search, 
+  Settings, 
+  Download,
+  FileText,
+  Folder,
+  Star,
+  Clock,
+  Tag
+} from 'lucide-react';
 
 interface SidebarProps {
   onSelectItem: (item: any, type: string) => void;
+  onBackToLibrary?: () => void;
+  selectedOrganization?: any;
+  isLibraryView?: boolean;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ onSelectItem }) => {
+const Sidebar: React.FC<SidebarProps> = ({ 
+  onSelectItem, 
+  onBackToLibrary,
+  selectedOrganization,
+  isLibraryView = false
+}) => {
   const [organizations, setOrganizations] = useState<any[]>([]);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -19,8 +41,10 @@ const Sidebar: React.FC<SidebarProps> = ({ onSelectItem }) => {
 
   // Load organizations on component mount
   useEffect(() => {
-    loadOrganizations();
-  }, []);
+    if (!isLibraryView) {
+      loadOrganizations();
+    }
+  }, [isLibraryView]);
 
   const loadOrganizations = async () => {
     if (!window.electronAPI) {
@@ -86,12 +110,121 @@ const Sidebar: React.FC<SidebarProps> = ({ onSelectItem }) => {
     }
   };
 
+  // Render the Library Sidebar when in library view
+  if (isLibraryView && selectedOrganization) {
+    return (
+      <div className="library-sidebar-container">
+        {/* Header */}
+        <div className="library-sidebar-header">
+          <button onClick={onBackToLibrary} className="back-button">
+            <ChevronRight className="w-4 h-4 rotate-180" />
+            <span>Library</span>
+          </button>
+          
+          <div className="organization-info">
+            <div 
+              className="org-color-indicator"
+              style={{ backgroundColor: '#ffd700' }}
+            />
+            <div className="org-details">
+              <h3 className="org-name">{selectedOrganization.name}</h3>
+              <p className="org-description">{selectedOrganization.description}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Search */}
+        <div className="sidebar-search">
+          <Search className="search-icon w-4 h-4" />
+          <input
+            type="text"
+            placeholder="Search in this collection..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="search-input"
+          />
+        </div>
+
+        {/* Quick Actions */}
+        <div className="quick-actions">
+          <button className="quick-action">
+            <Plus className="w-4 h-4" />
+            <span>New Project</span>
+          </button>
+          <button className="quick-action">
+            <FileText className="w-4 h-4" />
+            <span>Quick Note</span>
+          </button>
+        </div>
+
+        {/* Navigation Tree */}
+        <div className="sidebar-navigation">
+          <div className="nav-section">
+            <div className="nav-section-header">
+              <Folder className="w-4 h-4" />
+              <span>Projects</span>
+              <button className="add-item-button">
+                <Plus className="w-3 h-3" />
+              </button>
+            </div>
+            
+            <div className="nav-items">
+              <div className="nav-item empty">
+                <span className="empty-text">No projects yet</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="nav-section">
+            <div className="nav-section-header">
+              <Clock className="w-4 h-4" />
+              <span>Recent</span>
+            </div>
+            
+            <div className="nav-items">
+              <div className="nav-item empty">
+                <span className="empty-text">No recent activity</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="nav-section">
+            <div className="nav-section-header">
+              <Star className="w-4 h-4" />
+              <span>Favorites</span>
+            </div>
+            
+            <div className="nav-items">
+              <div className="nav-item empty">
+                <span className="empty-text">No favorites yet</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="nav-section">
+            <div className="nav-section-header">
+              <Tag className="w-4 h-4" />
+              <span>Tags</span>
+            </div>
+            
+            <div className="nav-items">
+              <div className="nav-item empty">
+                <span className="empty-text">No tags yet</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Default Sidebar View (Home View)
   return (
     <>
       {/* Sidebar Header */}
       <div className="sidebar-header">
-        <h1 className="text-xl font-bold text-matrix-gold mb-2">MotherCore</h1>
-        <p className="text-sm text-matrix-amber mb-4">Your Digital Library</p>
+        <h1 className="text-xl font-bold text-matrix-gold mb-2">MOTHERCORE</h1>
+        <p className="text-sm text-matrix-amber mb-4">Your Knowledge Repository</p>
         
         {/* Search */}
         <div className="relative">
