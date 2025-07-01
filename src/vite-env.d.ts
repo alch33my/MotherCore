@@ -1,6 +1,11 @@
 /// <reference types="vite/client" />
 
 interface ElectronAPI {
+  // Window control
+  minimizeWindow: () => Promise<boolean>
+  maximizeWindow: () => Promise<boolean>
+  closeWindow: () => Promise<boolean>
+  
   // Authentication
   checkAuthStatus: () => Promise<boolean>
   setupAuth: (password: string) => Promise<{ success: boolean, error?: string}>

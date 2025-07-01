@@ -3,157 +3,118 @@ const electron = require("electron");
 const url = require("url");
 const path = require("path");
 const Database = require("better-sqlite3");
-const bcrypt = require("bcryptjs");
-const fs = require("fs");
+const bcryptjs = require("bcryptjs");
+require("fs");
 const require$$0 = require("crypto");
 var _documentCurrentScript = typeof document !== "undefined" ? document.currentScript : null;
 const __filename$2 = url.fileURLToPath(typeof document === "undefined" ? require("url").pathToFileURL(__filename).href : _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("main.js", document.baseURI).href);
 path.dirname(__filename$2);
 class DatabaseManager {
   db;
-  dbPath;
+  static instance = null;
   constructor() {
-    try {
-      const userDataPath = electron.app.getPath("userData");
-      if (!fs.existsSync(userDataPath)) {
-        fs.mkdirSync(userDataPath, { recursive: true });
-      }
-      this.dbPath = path.join(userDataPath, "mothercore.db");
-      console.log("Database path:", this.dbPath);
-      this.db = new Database(this.dbPath);
-      console.log("Database connection established");
-      this.initializeTables();
-      console.log("Database tables initialized");
-    } catch (error) {
-      console.error("Error initializing database:", error);
-      throw error;
+    const userDataPath = electron.app.getPath("userData");
+    const dbPath = path.join(userDataPath, "mothercore.db");
+    this.db = new Database(dbPath, { verbose: console.log });
+    this.initializeTables();
+  }
+  static getInstance() {
+    if (!DatabaseManager.instance) {
+      DatabaseManager.instance = new DatabaseManager();
     }
+    return DatabaseManager.instance;
   }
   initializeTables() {
-    try {
-      this.db.prepare(`
-        CREATE TABLE IF NOT EXISTS organizations (
-          id TEXT PRIMARY KEY,
-          name TEXT NOT NULL,
-          description TEXT,
-          color TEXT,
-          icon TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-      `).run();
-      this.db.prepare(`
-        CREATE TABLE IF NOT EXISTS projects (
-          id TEXT PRIMARY KEY,
-          organization_id TEXT,
-          name TEXT NOT NULL,
-          description TEXT,
-          color TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY(organization_id) REFERENCES organizations(id)
-        )
-      `).run();
-      this.db.prepare(`
-        CREATE TABLE IF NOT EXISTS books (
-          id TEXT PRIMARY KEY,
-          project_id TEXT,
-          name TEXT NOT NULL,
-          description TEXT,
-          cover_image TEXT,
-          spine_color TEXT,
-          position INTEGER,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY(project_id) REFERENCES projects(id)
-        )
-      `).run();
-      this.db.prepare(`
-        CREATE TABLE IF NOT EXISTS chapters (
-          id TEXT PRIMARY KEY,
-          book_id TEXT,
-          name TEXT NOT NULL,
-          position INTEGER,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY(book_id) REFERENCES books(id)
-        )
-      `).run();
-      this.db.prepare(`
-        CREATE TABLE IF NOT EXISTS pages (
-          id TEXT PRIMARY KEY,
-          chapter_id TEXT,
-          title TEXT NOT NULL,
-          content BLOB,
-          content_text TEXT,
-          page_type TEXT DEFAULT 'note',
-          tags TEXT,
-          position INTEGER,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY(chapter_id) REFERENCES chapters(id)
-        )
-      `).run();
-      this.db.prepare(`
-        CREATE TABLE IF NOT EXISTS media_files (
-          id TEXT PRIMARY KEY,
-          page_id TEXT,
-          filename TEXT NOT NULL,
-          file_path TEXT NOT NULL,
-          file_type TEXT NOT NULL,
-          file_size INTEGER,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY(page_id) REFERENCES pages(id)
-        )
-      `).run();
-      this.db.prepare(`
-        CREATE TABLE IF NOT EXISTS auth (
-          id INTEGER PRIMARY KEY,
-          password_hash TEXT NOT NULL,
-          salt TEXT NOT NULL,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-      `).run();
-    } catch (error) {
-      console.error("Error creating tables:", error);
-      throw error;
-    }
+    this.db.prepare(`
+      CREATE TABLE IF NOT EXISTS auth (
+        id INTEGER PRIMARY KEY,
+        password_hash TEXT NOT NULL,
+        salt TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+    this.db.prepare(`
+      CREATE TABLE IF NOT EXISTS organizations (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+    this.db.prepare(`
+      CREATE TABLE IF NOT EXISTS projects (
+        id TEXT PRIMARY KEY,
+        organization_id TEXT,
+        name TEXT NOT NULL,
+        description TEXT,
+        color TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(organization_id) REFERENCES organizations(id)
+      )
+    `).run();
+    this.db.prepare(`
+      CREATE TABLE IF NOT EXISTS books (
+        id TEXT PRIMARY KEY,
+        project_id TEXT,
+        name TEXT NOT NULL,
+        description TEXT,
+        cover_image TEXT,
+        spine_color TEXT,
+        position INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(project_id) REFERENCES projects(id)
+      )
+    `).run();
+    this.db.prepare(`
+      CREATE TABLE IF NOT EXISTS chapters (
+        id TEXT PRIMARY KEY,
+        book_id TEXT,
+        name TEXT NOT NULL,
+        position INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(book_id) REFERENCES books(id)
+      )
+    `).run();
+    this.db.prepare(`
+      CREATE TABLE IF NOT EXISTS pages (
+        id TEXT PRIMARY KEY,
+        chapter_id TEXT,
+        title TEXT NOT NULL,
+        content BLOB,
+        content_text TEXT,
+        page_type TEXT DEFAULT 'note',
+        tags TEXT,
+        position INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(chapter_id) REFERENCES chapters(id)
+      )
+    `).run();
+    this.db.prepare(`
+      CREATE TABLE IF NOT EXISTS media_files (
+        id TEXT PRIMARY KEY,
+        page_id TEXT,
+        filename TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        file_type TEXT NOT NULL,
+        file_size INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(page_id) REFERENCES pages(id)
+      )
+    `).run();
   }
-  // Authentication methods
-  checkAuthExists() {
-    try {
-      const result = this.db.prepare("SELECT COUNT(*) as count FROM auth").get();
-      return result.count > 0;
-    } catch (error) {
-      console.error("Error checking auth status:", error);
-      throw error;
-    }
+  saveAuthCredentials(passwordHash, salt) {
+    const stmt = this.db.prepare(`
+      INSERT INTO auth (password_hash, salt) VALUES (?, ?)
+    `);
+    return stmt.run(passwordHash, salt);
   }
-  setupInitialAuth(password) {
-    try {
-      const existingAuth = this.db.prepare("SELECT * FROM auth LIMIT 1").get();
-      if (existingAuth) {
-        throw new Error("Authentication is already set up");
-      }
-      const salt = bcrypt.genSaltSync(10);
-      const passwordHash = bcrypt.hashSync(password, salt);
-      this.db.prepare("INSERT INTO auth (password_hash, salt) VALUES (?, ?)").run(passwordHash, salt);
-    } catch (error) {
-      console.error("Error setting up authentication:", error);
-      throw error;
-    }
-  }
-  authenticateUser(password) {
-    try {
-      const auth = this.db.prepare("SELECT * FROM auth LIMIT 1").get();
-      if (!auth) {
-        throw new Error("No authentication setup found");
-      }
-      return bcrypt.compareSync(password, auth.password_hash);
-    } catch (error) {
-      console.error("Error authenticating user:", error);
-      throw error;
-    }
+  getAuthCredentials() {
+    const stmt = this.db.prepare("SELECT * FROM auth ORDER BY created_at DESC LIMIT 1");
+    return stmt.get();
   }
   // Organization methods
   createOrganization(organization) {
@@ -325,14 +286,7 @@ class DatabaseManager {
     return this.db.prepare("DELETE FROM pages WHERE id = ?").run(id);
   }
   close() {
-    try {
-      if (this.db) {
-        console.log("Closing database connection");
-        this.db.close();
-      }
-    } catch (error) {
-      console.error("Error closing database:", error);
-    }
+    this.db.close();
   }
 }
 function getDefaultExportFromCjs(x) {
@@ -873,11 +827,12 @@ uuid.parse;
 const __filename$1 = url.fileURLToPath(typeof document === "undefined" ? require("url").pathToFileURL(__filename).href : _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("main.js", document.baseURI).href);
 const __dirname$1 = path.dirname(__filename$1);
 let dbManager;
+let mainWindow = null;
 function createWindow() {
   const preloadPath = electron.app.isPackaged ? path.join(__dirname$1, "..", "preload", "preload.js") : path.join(__dirname$1, "../../dist-electron/preload/preload.js");
   console.log("Preload script path:", preloadPath);
   console.log("Current directory:", __dirname$1);
-  const mainWindow = new electron.BrowserWindow({
+  mainWindow = new electron.BrowserWindow({
     width: 1200,
     height: 800,
     backgroundColor: "#0a0a0a",
@@ -888,7 +843,9 @@ function createWindow() {
       contextIsolation: true,
       sandbox: false
       // Allow access to Node.js APIs in preload script
-    }
+    },
+    // Remove default frame for custom title bar
+    frame: false
   });
   if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
@@ -901,24 +858,48 @@ function createWindow() {
 function initializeApplication() {
   try {
     console.log("Initializing database...");
-    dbManager = new DatabaseManager();
+    dbManager = DatabaseManager.getInstance();
     console.log("Database initialized successfully");
-    electron.ipcMain.handle("check-auth-status", () => {
-      return dbManager.checkAuthExists();
+    electron.ipcMain.handle("minimizeWindow", () => {
+      if (mainWindow) mainWindow.minimize();
+      return true;
     });
-    electron.ipcMain.handle("setup-auth", async (_, password) => {
+    electron.ipcMain.handle("maximizeWindow", () => {
+      if (mainWindow) {
+        if (mainWindow.isMaximized()) {
+          mainWindow.unmaximize();
+        } else {
+          mainWindow.maximize();
+        }
+      }
+      return true;
+    });
+    electron.ipcMain.handle("closeWindow", () => {
+      if (mainWindow) mainWindow.close();
+      return true;
+    });
+    electron.ipcMain.handle("check-auth-status", () => {
+      const credentials = dbManager.getAuthCredentials();
+      return !!credentials;
+    });
+    electron.ipcMain.handle("setup-auth", async (event, password) => {
       try {
-        await dbManager.setupInitialAuth(password);
+        const salt = bcryptjs.genSaltSync(10);
+        const passwordHash = bcryptjs.hashSync(password, salt);
+        dbManager.saveAuthCredentials(passwordHash, salt);
         return { success: true };
       } catch (error) {
+        console.error("Auth setup error:", error);
         return { success: false, error: error.message };
       }
     });
-    electron.ipcMain.handle("authenticate", async (_, password) => {
+    electron.ipcMain.handle("authenticate", async (event, password) => {
       try {
-        const result = await dbManager.authenticateUser(password);
-        return result;
+        const auth = dbManager.getAuthCredentials();
+        if (!auth) return false;
+        return bcryptjs.compareSync(password, auth.password_hash);
       } catch (error) {
+        console.error("Authentication error:", error);
         return false;
       }
     });

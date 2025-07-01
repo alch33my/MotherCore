@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react'
-import { ChevronRightIcon, ChevronDownIcon, FolderIcon, BookIcon, FileIcon, PlusIcon } from 'lucide-react'
+import { ChevronRightIcon, ChevronDownIcon, FolderIcon, BookIcon, FileIcon, FileTextIcon, PlusIcon } from 'lucide-react'
 
 interface NavigationTreeProps {
   onSelectOrganization: (orgId: string) => void
   onSelectProject: (projectId: string) => void
   onSelectBook: (bookId: string) => void
   onSelectChapter: (chapterId: string) => void
+  onSelectPage: (pageId: string) => void
   onAddOrganization: () => void
   onAddProject: (orgId: string) => void
   onAddBook: (projectId: string) => void
   onAddChapter: (bookId: string) => void
+  onAddPage: (chapterId: string) => void
 }
 
 interface TreeNode {
@@ -17,7 +19,7 @@ interface TreeNode {
   name: string
   color?: string
   icon?: string
-  type: 'organization' | 'project' | 'book' | 'chapter'
+  type: 'organization' | 'project' | 'book' | 'chapter' | 'page'
   children?: TreeNode[]
   parentId?: string
   expanded?: boolean
@@ -28,10 +30,12 @@ function NavigationTree({
   onSelectProject,
   onSelectBook,
   onSelectChapter,
+  onSelectPage,
   onAddOrganization,
   onAddProject,
   onAddBook,
   onAddChapter,
+  onAddPage,
 }: NavigationTreeProps) {
   const [organizations, setOrganizations] = useState<TreeNode[]>([])
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({})
@@ -180,6 +184,7 @@ function NavigationTree({
                               name: chapter.name,
                               type: 'chapter' as const,
                               parentId: bookId,
+                              children: [],
                               expanded: false
                             })) || []
                           }
@@ -204,7 +209,66 @@ function NavigationTree({
     }
   }
 
-  function toggleExpand(node: TreeNode, parentId?: string, grandParentId?: string) {
+  async function loadPages(chapterId: string, bookId: string, projectId: string, orgId: string) {
+    try {
+      if (!window.electronAPI) {
+        console.error('Electron API not available')
+        return
+      }
+      
+      setLoading(prev => ({ ...prev, [chapterId]: true }))
+      const result = await window.electronAPI.getPages(chapterId)
+      if (result.success && result.pages) {
+        setOrganizations(prevOrgs => {
+          return prevOrgs.map(org => {
+            if (org.id === orgId) {
+              return {
+                ...org,
+                children: org.children?.map(project => {
+                  if (project.id === projectId) {
+                    return {
+                      ...project,
+                      children: project.children?.map(book => {
+                        if (book.id === bookId) {
+                          return {
+                            ...book,
+                            children: book.children?.map(chapter => {
+                              if (chapter.id === chapterId) {
+                                return {
+                                  ...chapter,
+                                  children: result.pages?.map((page: any) => ({
+                                    id: page.id,
+                                    name: page.title,
+                                    type: 'page' as const,
+                                    parentId: chapterId
+                                  })) || []
+                                }
+                              }
+                              return chapter
+                            }) || []
+                          }
+                        }
+                        return book
+                      }) || []
+                    }
+                  }
+                  return project
+                }) || []
+              }
+            }
+            return org
+          })
+        })
+      }
+    } catch (err) {
+      console.error(`Failed to load pages for chapter ${chapterId}:`, err)
+      window.electronAPI?.logError(String(err))
+    } finally {
+      setLoading(prev => ({ ...prev, [chapterId]: false }))
+    }
+  }
+
+  function toggleExpand(node: TreeNode, parentId?: string, grandParentId?: string, greatGrandParentId?: string) {
     const nodeId = node.id
     const isExpanded = expandedNodes[nodeId] || false
     
@@ -222,6 +286,8 @@ function NavigationTree({
         loadBooks(nodeId, parentId)
       } else if (node.type === 'book' && (!node.children || node.children.length === 0) && parentId && grandParentId) {
         loadChapters(nodeId, parentId, grandParentId)
+      } else if (node.type === 'chapter' && (!node.children || node.children.length === 0) && parentId && grandParentId && greatGrandParentId) {
+        loadPages(nodeId, parentId, grandParentId, greatGrandParentId)
       }
     }
   }
@@ -240,6 +306,9 @@ function NavigationTree({
       case 'chapter':
         onSelectChapter(node.id)
         break
+      case 'page':
+        onSelectPage(node.id)
+        break
     }
   }
 
@@ -254,43 +323,61 @@ function NavigationTree({
       case 'book':
         onAddChapter(node.id)
         break
+      case 'chapter':
+        onAddPage(node.id)
+        break
     }
   }
 
   function getIcon(type: TreeNode['type'], color?: string) {
     switch (type) {
       case 'organization':
-        return <FolderIcon size={16} className="mr-2" style={{ color: color || '#00ff41' }} />
+        return <FolderIcon size={16} className="text-matrix-amber" />
       case 'project':
-        return <FolderIcon size={16} className="mr-2" style={{ color: color || '#ffb000' }} />
+        return <FolderIcon size={16} style={{ color: color || '#ffb000' }} />
       case 'book':
-        return <BookIcon size={16} className="mr-2" style={{ color: color || '#ffd700' }} />
+        return <BookIcon size={16} style={{ color: color || '#ffd700' }} />
       case 'chapter':
-        return <FileIcon size={16} className="mr-2" style={{ color: '#00ff41' }} />
+        return <FileIcon size={16} className="text-matrix-gold" />
+      case 'page':
+        return <FileTextIcon size={16} className="text-white" />
+      default:
+        return <FileIcon size={16} className="text-matrix-gold" />
     }
   }
 
-  function renderTreeNode(node: TreeNode, depth: number = 0, parentId?: string, grandParentId?: string) {
+  function renderTreeNode(node: TreeNode, depth: number = 0, parentId?: string, grandParentId?: string, greatGrandParentId?: string) {
     const isExpanded = expandedNodes[node.id] || false
     const isLoading = loading[node.id] || false
-    const hasChildren = node.children && node.children.length > 0
-    const paddingLeft = `${depth * 16}px`
+    const hasChildren = (node.children && node.children.length > 0) || 
+      (node.type !== 'page' && !isLoading); // Pages don't have children
+    
+    // Calculate padding based on depth
+    const paddingLeft = `${depth * 16 + 4}px`
     
     return (
-      <React.Fragment key={node.id}>
+      <div key={node.id} className="select-none">
         <div 
-          className="flex items-center py-1 hover:bg-matrix-dark-gray hover:bg-opacity-50 rounded cursor-pointer"
+          className={`flex items-center justify-between py-1 px-2 hover:bg-matrix-gold hover:bg-opacity-10 rounded cursor-pointer`}
           style={{ paddingLeft }}
         >
-          <div className="flex items-center flex-1" onClick={() => toggleExpand(node, parentId, grandParentId)}>
+          <div className="flex items-center flex-1" onClick={() => toggleExpand(node, parentId, grandParentId, greatGrandParentId)}>
             <span className="w-4 h-4 flex items-center justify-center mr-1">
-              {node.type !== 'chapter' && (
-                isExpanded ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />
+              {node.type !== 'page' && (
+                isLoading ? (
+                  <div className="w-3 h-3 border-2 border-matrix-amber border-t-transparent rounded-full animate-spin" />
+                ) : hasChildren ? (
+                  isExpanded ? 
+                    <ChevronDownIcon size={14} className="text-matrix-amber" /> : 
+                    <ChevronRightIcon size={14} className="text-matrix-amber" />
+                ) : null
               )}
             </span>
-            {getIcon(node.type, node.color)}
+            
+            <span className="mr-2">{getIcon(node.type, node.color)}</span>
+            
             <span 
-              className="truncate"
+              className="text-white truncate flex-1"
               onClick={(e) => {
                 e.stopPropagation()
                 handleSelect(node)
@@ -300,13 +387,14 @@ function NavigationTree({
             </span>
           </div>
           
-          {node.type !== 'chapter' && (
+          {node.type !== 'page' && (
             <button
-              className="p-1 hover:bg-matrix-green hover:bg-opacity-20 rounded opacity-50 hover:opacity-100"
+              className="w-6 h-6 flex items-center justify-center text-matrix-amber hover:text-matrix-gold rounded-full hover:bg-matrix-black hover:bg-opacity-30"
               onClick={(e) => {
                 e.stopPropagation()
                 handleAdd(node)
               }}
+              title={`Add to ${node.name}`}
             >
               <PlusIcon size={14} />
             </button>
@@ -315,24 +403,24 @@ function NavigationTree({
         
         {isExpanded && (
           <div>
-            {isLoading && (
-              <div className="text-matrix-amber text-xs py-1" style={{ paddingLeft: `${depth * 16 + 24}px` }}>
+            {isLoading && !node.children?.length && (
+              <div className="pl-8 py-1 text-matrix-amber text-sm">
                 Loading...
               </div>
             )}
             
             {hasChildren && node.children?.map(childNode => 
-              renderTreeNode(childNode, depth + 1, node.id, parentId)
-            )}
-            
-            {!isLoading && !hasChildren && (
-              <div className="text-matrix-green text-xs opacity-50 py-1" style={{ paddingLeft: `${depth * 16 + 24}px` }}>
-                No items found
-              </div>
+              renderTreeNode(
+                childNode, 
+                depth + 1, 
+                node.id, 
+                parentId, 
+                grandParentId
+              )
             )}
           </div>
         )}
-      </React.Fragment>
+      </div>
     )
   }
   

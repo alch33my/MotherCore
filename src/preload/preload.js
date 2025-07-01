@@ -5,6 +5,11 @@ console.log('Preload script is running')
 
 // Define the electronAPI object
 const electronAPI = {
+  // Window control methods
+  minimizeWindow: () => ipcRenderer.invoke('minimizeWindow'),
+  maximizeWindow: () => ipcRenderer.invoke('maximizeWindow'),
+  closeWindow: () => ipcRenderer.invoke('closeWindow'),
+  
   // Authentication methods
   checkAuthStatus: () => ipcRenderer.invoke('check-auth-status'),
   setupAuth: (password) => ipcRenderer.invoke('setup-auth', password),

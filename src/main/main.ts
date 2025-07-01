@@ -3,6 +3,7 @@ import { fileURLToPath } from 'url'
 import path from 'path'
 import DatabaseManager from './database'
 import { v4 as uuidv4 } from 'uuid'
+import bcryptjs from 'bcryptjs'
 
 // Workaround for __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url)
@@ -10,6 +11,8 @@ const __dirname = path.dirname(__filename)
 
 // Database instance
 let dbManager: DatabaseManager
+// Store main window reference
+let mainWindow: BrowserWindow | null = null
 
 function createWindow() {
   // Determine the preload script path based on environment
@@ -20,7 +23,7 @@ function createWindow() {
   console.log('Preload script path:', preloadPath)
   console.log('Current directory:', __dirname)
   
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     backgroundColor: '#0a0a0a',
@@ -30,7 +33,9 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: false // Allow access to Node.js APIs in preload script
-    }
+    },
+    // Remove default frame for custom title bar
+    frame: false
   })
 
   // Load the index.html from the Vite dev server or the built version
@@ -50,28 +55,58 @@ function initializeApplication() {
   try {
     // Create database instance
     console.log('Initializing database...')
-    dbManager = new DatabaseManager()
+    dbManager = DatabaseManager.getInstance()
     console.log('Database initialized successfully')
+    
+    // Window control handlers
+    ipcMain.handle('minimizeWindow', () => {
+      if (mainWindow) mainWindow.minimize()
+      return true
+    })
+    
+    ipcMain.handle('maximizeWindow', () => {
+      if (mainWindow) {
+        if (mainWindow.isMaximized()) {
+          mainWindow.unmaximize()
+        } else {
+          mainWindow.maximize()
+        }
+      }
+      return true
+    })
+    
+    ipcMain.handle('closeWindow', () => {
+      if (mainWindow) mainWindow.close()
+      return true
+    })
     
     // Authentication handlers
     ipcMain.handle('check-auth-status', () => {
-      return dbManager.checkAuthExists()
+      const credentials = dbManager.getAuthCredentials()
+      return !!credentials
     })
     
-    ipcMain.handle('setup-auth', async (_, password: string) => {
+    ipcMain.handle('setup-auth', async (event, password) => {
       try {
-        await dbManager.setupInitialAuth(password)
+        const salt = bcryptjs.genSaltSync(10)
+        const passwordHash = bcryptjs.hashSync(password, salt)
+        
+        dbManager.saveAuthCredentials(passwordHash, salt)
         return { success: true }
       } catch (error) {
+        console.error('Auth setup error:', error)
         return { success: false, error: (error as Error).message }
       }
     })
     
-    ipcMain.handle('authenticate', async (_, password: string) => {
+    ipcMain.handle('authenticate', async (event, password) => {
       try {
-        const result = await dbManager.authenticateUser(password)
-        return result
+        const auth = dbManager.getAuthCredentials()
+        if (!auth) return false
+
+        return bcryptjs.compareSync(password, auth.password_hash)
       } catch (error) {
+        console.error('Authentication error:', error)
         return false
       }
     })

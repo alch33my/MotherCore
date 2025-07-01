@@ -1,87 +1,152 @@
-# MotherCore: Digital Library Application
+# MotherCore Digital Library
 
-## 🚀 Project Overview
+MotherCore is a desktop application for organizing and managing your knowledge with a hierarchical structure designed for deep learning and easy retrieval.
 
-MotherCore is a stunning, portable desktop notes library application with a Matrix-inspired cyberpunk aesthetic. Built with Electron, React, and TypeScript, it provides a powerful, local-first knowledge management solution.
+## Features
 
-## 🛠 Technology Stack
+- **Hierarchical Organization**: Organize content in organizations, projects, books, chapters, and pages
+- **Local-First**: All data is stored locally in a SQLite database
+- **Rich Text Editing**: Create and edit content with rich text formatting
+- **Secure**: Password protection for your knowledge base
+- **Modern UI**: Sleek, cyberpunk-inspired interface with matrix rain effect
 
-- **Framework**: Electron + React + TypeScript
-- **UI**: Tailwind CSS, Shadcn UI
-- **Database**: SQLite (better-sqlite3)
-- **State Management**: Zustand
-- **Authentication**: bcryptjs
-- **Graphics**: Three.js
-- **Build Tool**: Vite
-
-## ✨ Key Features
-
-- 🔒 Secure local authentication
-- 📚 Hierarchical note organization
-- 🌈 Matrix-inspired digital rain background
-- 💾 Local file storage and backup
-- 🖥️ Portable desktop application
-
-## 🏁 Getting Started
+## Installation
 
 ### Prerequisites
 
-- Node.js (18.0.0+)
-- npm or pnpm
+- Node.js (v18+)
+- npm or yarn
 
-### Installation
+### Development Setup
 
+1. Clone the repository:
 ```bash
-# Clone the repository
 git clone https://github.com/yourusername/mothercore.git
-
-# Navigate to project directory
 cd mothercore
+```
 
-# Install dependencies
+2. Install dependencies:
+```bash
 npm install
+```
 
-# Start development server
+3. Run the development server:
+```bash
 npm run electron:dev
 ```
 
 ### Building for Production
 
+1. Build the application:
 ```bash
-# Build the application
-npm run electron:build
+npm run electron:pack
 ```
 
-## 🔧 Development Scripts
+2. The packaged application will be available in the `dist` directory.
 
-- `npm run dev`: Start development server
-- `npm run build`: Build for production
-- `npm run electron:dev`: Start Electron development
-- `npm run electron:build`: Build Electron application
+## Usage
 
-## 🔒 Security
+### First Launch
 
-- Local-only data storage
-- AES-256 encryption for sensitive data
-- Secure password hashing
-- No telemetry or external communications
+On first launch, you'll be prompted to create a password to secure your digital library. This password will be required for future access.
 
-## 📋 Roadmap
+### Creating Content
 
-- [ ] Full note management system
-- [ ] 3D library visualization
-- [ ] Advanced search capabilities
-- [ ] Export and backup features
-- [ ] Plugin architecture
+1. **Organizations**: Start by creating an organization to group related projects
+2. **Projects**: Within an organization, create projects to organize your work
+3. **Books**: Create books within projects to structure your knowledge
+4. **Chapters**: Divide books into chapters for logical organization
+5. **Pages**: Create pages within chapters to write your content
 
-## 🤝 Contributing
+### Navigation
 
-Contributions are welcome! Please read our contributing guidelines before getting started.
+Use the sidebar tree to navigate through your content hierarchy. Click on any item to view its details and content.
 
-## 📄 License
+## Architecture
 
-[Your License Here]
+MotherCore is built with:
 
-## 📞 Contact
+- **Electron**: Cross-platform desktop framework
+- **React**: UI library
+- **TypeScript**: Type-safe JavaScript
+- **SQLite**: Local database (via better-sqlite3)
+- **Tailwind CSS**: Utility-first CSS framework
 
-[Your Contact Information]
+### Directory Structure
+
+```
+mothercore/
+├── dist-electron/     # Compiled Electron main and preload scripts
+├── src/
+│   ├── main/          # Electron main process code
+│   │   ├── database.ts # Database manager
+│   │   └── main.ts    # Main process entry point
+│   ├── preload/       # Electron preload scripts
+│   ├── renderer/      # React renderer process code
+│   │   ├── components/ # React components
+│   │   │   ├── books/
+│   │   │   ├── chapters/
+│   │   │   ├── content/
+│   │   │   ├── effects/
+│   │   │   ├── layout/
+│   │   │   ├── navigation/
+│   │   │   └── organizations/
+│   │   └── ...
+│   ├── App.tsx        # Main React component
+│   └── ...
+├── package.json
+└── ...
+```
+
+## Developer Notes
+
+### IPC Communication
+
+Communication between the Electron main process and the renderer process is handled through IPC (Inter-Process Communication). The available methods are defined in the `src/vite-env.d.ts` file.
+
+### Database Schema
+
+The SQLite database has the following tables:
+
+- `auth`: Stores authentication credentials
+- `organizations`: Top-level organizational units
+- `projects`: Projects belonging to organizations
+- `books`: Books belonging to projects
+- `chapters`: Chapters belonging to books
+- `pages`: Pages belonging to chapters with content
+
+### Adding New Features
+
+When adding new features:
+
+1. Update the database schema in `src/main/database.ts` if needed
+2. Add IPC handlers in `src/main/main.ts`
+3. Update the type definitions in `src/vite-env.d.ts`
+4. Add UI components in `src/renderer/components/`
+5. Update the main App component if needed
+
+## Troubleshooting
+
+### Common Issues
+
+- **Blank Screen**: Make sure the preload script is correctly configured in `main.ts`
+- **Authentication Issues**: Check the database file permissions
+- **UI Not Updating**: Ensure CSS is properly imported and applied
+
+### Debug Mode
+
+Run the application with debug mode enabled:
+
+```bash
+npm run electron:dev
+```
+
+The DevTools will automatically open, allowing you to inspect elements and check console logs.
+
+## License
+
+[MIT](LICENSE)
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.

@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
+import './App.css'
 import MatrixRain from './renderer/components/effects/matrix-rain'
 import { LockIcon, UnlockIcon, KeyIcon, AlertTriangleIcon } from 'lucide-react'
-import NavigationTree from './renderer/components/navigation/navigation-tree'
-import ContentContainer from './renderer/components/content/content-container'
-import CreateOrganizationForm from './renderer/components/organizations/create-organization-form'
-import CreateProjectForm from './renderer/components/projects/create-project-form'
-import CreateBookForm from './renderer/components/books/create-book-form'
-import CreateChapterForm from './renderer/components/chapters/create-chapter-form'
+import Sidebar from './renderer/components/navigation/Sidebar'
+import MainContent from './renderer/components/content/MainContent'
+import TitleBar from './renderer/components/layout/TitleBar'
+import TestComponent from './renderer/components/test-component'
+
+// Update the type definition at the top of the file
+type ContentType = 'organization' | 'project' | 'book' | 'chapter' | 'page' | null
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -18,17 +20,33 @@ function App() {
   const [preloadError, setPreloadError] = useState<string | null>(null)
   
   // Navigation state
-  const [selectedType, setSelectedType] = useState<'organization' | 'project' | 'book' | 'chapter' | null>(null)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedItem, setSelectedItem] = useState<any>(null)
+  const [selectedType, setSelectedType] = useState<string>('')
   
   // Modal states
   const [showCreateOrgForm, setShowCreateOrgForm] = useState(false)
   const [showCreateProjectForm, setShowCreateProjectForm] = useState(false)
   const [showCreateBookForm, setShowCreateBookForm] = useState(false)
   const [showCreateChapterForm, setShowCreateChapterForm] = useState(false)
+  const [showCreatePageForm, setShowCreatePageForm] = useState(false)
   const [activeOrgId, setActiveOrgId] = useState<string | null>(null)
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null)
   const [activeBookId, setActiveBookId] = useState<string | null>(null)
+  const [activeChapterId, setActiveChapterId] = useState<string | null>(null)
+  
+  // Status bar data
+  const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString())
+  const [wordCount, setWordCount] = useState(0)
+  const [charCount, setCharCount] = useState(0)
+  
+  // Update time every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date().toLocaleTimeString());
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, []);
   
   // Check if electronAPI is available
   useEffect(() => {
@@ -59,27 +77,6 @@ function App() {
     }
   }
   
-  // Load organizations after authentication
-  useEffect(() => {
-    if (isAuthenticated && window.electronAPI) {
-      loadOrganizations()
-    }
-  }, [isAuthenticated])
-  
-  async function loadOrganizations() {
-    if (!window.electronAPI) return
-    
-    try {
-      const result = await window.electronAPI.getOrganizations()
-      if (result.success && result.organizations) {
-        // Store organizations if needed later
-      }
-    } catch (err) {
-      console.error('Failed to load organizations:', err)
-      window.electronAPI.logError(String(err))
-    }
-  }
-
   async function handleSetupAuth() {
     if (!window.electronAPI) return
     
@@ -132,99 +129,28 @@ function App() {
       setIsLoading(false)
     }
   }
+  
+  const handleSelectItem = (item: any, type: string) => {
+    setSelectedItem(item);
+    setSelectedType(type);
+  };
+  
+  const handleEditorStatsChange = (stats: { words: number, characters: number }) => {
+    setWordCount(stats.words);
+    setCharCount(stats.characters);
+  };
 
-  function handleCreateOrganizationSuccess() {
-    loadOrganizations()
-  }
-  
-  function handleSelectOrganization(orgId: string) {
-    setSelectedType('organization')
-    setSelectedId(orgId)
-  }
-  
-  function handleSelectProject(projectId: string) {
-    setSelectedType('project')
-    setSelectedId(projectId)
-  }
-  
-  function handleSelectBook(bookId: string) {
-    setSelectedType('book')
-    setSelectedId(bookId)
-  }
-  
-  function handleSelectChapter(chapterId: string) {
-    setSelectedType('chapter')
-    setSelectedId(chapterId)
-  }
-  
-  function handleAddProject(orgId: string) {
-    setActiveOrgId(orgId)
-    setShowCreateProjectForm(true)
-  }
-  
-  function handleAddBook(projectId: string) {
-    setActiveProjectId(projectId)
-    setShowCreateBookForm(true)
-  }
-  
-  function handleAddChapter(bookId: string) {
-    setActiveBookId(bookId)
-    setShowCreateChapterForm(true)
-  }
-  
-  function handleProjectCreated() {
-    // If we're viewing the organization, refresh the content
-    if (selectedType === 'organization' && selectedId === activeOrgId) {
-      // Force content refresh
-      const currentId = selectedId
-      setSelectedId(null)
-      setTimeout(() => setSelectedId(currentId), 10)
-    }
-  }
-  
-  function handleBookCreated() {
-    // If we're viewing the project, refresh the content
-    if (selectedType === 'project' && selectedId === activeProjectId) {
-      // Force content refresh
-      const currentId = selectedId
-      setSelectedId(null)
-      setTimeout(() => setSelectedId(currentId), 10)
-    }
-  }
-  
-  function handleChapterCreated() {
-    // If we're viewing the book, refresh the content
-    if (selectedType === 'book' && selectedId === activeBookId) {
-      // Force content refresh
-      const currentId = selectedId
-      setSelectedId(null)
-      setTimeout(() => setSelectedId(currentId), 10)
-    }
-  }
-
-  // Render a screen showing preload script error
   function renderPreloadErrorScreen() {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-matrix-black">
-        <div className="bg-matrix-dark-gray p-8 rounded-lg shadow-lg w-96 border border-matrix-green">
-          <div className="flex items-center justify-center mb-6">
-            <AlertTriangleIcon className="text-red-500 mr-2" size={28} />
-            <h1 className="text-red-500 text-2xl font-bold">Initialization Error</h1>
-          </div>
-          
-          <p className="text-matrix-amber mb-6 text-center">
-            {preloadError}
+        <div className="max-w-md p-8 bg-matrix-dark-gray rounded-lg border border-matrix-error shadow-lg text-center">
+          <AlertTriangleIcon className="w-16 h-16 text-matrix-error mx-auto mb-4" />
+          <h2 className="text-xl text-matrix-error font-bold mb-4">Preload Error</h2>
+          <p className="text-matrix-white mb-6">{preloadError}</p>
+          <p className="text-sm text-matrix-amber">
+            This is likely due to an issue with the Electron configuration.
+            Please check the console for more details.
           </p>
-          
-          <div className="text-matrix-green text-sm mt-4">
-            <p>Troubleshooting steps:</p>
-            <ol className="list-decimal pl-5 mt-2 space-y-1">
-              <li>Restart the application</li>
-              <li>Verify preload script path in main.ts</li>
-              <li>Check console for additional errors</li>
-              <li>Rebuild the application using npm run build</li>
-            </ol>
-          </div>
         </div>
       </div>
     )
@@ -233,14 +159,18 @@ function App() {
   function renderAuthSetupScreen() {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-matrix-black">
-        <div className="bg-matrix-dark-gray p-8 rounded-lg shadow-lg w-96 border border-matrix-green">
-          <div className="flex items-center justify-center mb-6">
-            <KeyIcon className="text-matrix-gold mr-2" size={28} />
-            <h1 className="text-matrix-gold text-2xl font-bold">Welcome to MotherCore</h1>
+        <MatrixRain colorScheme="gold" />
+        <div className="z-10 max-w-md p-8 bg-matrix-dark-gray bg-opacity-80 rounded-lg border border-matrix-gold shadow-matrix">
+          <div className="flex justify-center mb-6">
+            <KeyIcon size={48} className="text-matrix-gold" />
           </div>
           
+          <h2 className="text-2xl text-matrix-gold font-bold text-center mb-2">
+            Welcome to MotherCore
+          </h2>
+          
           <p className="text-matrix-amber mb-6 text-center">
-            Create a master password to secure your digital library
+            Set up a password to secure your digital library
           </p>
           
           <div className="space-y-4">
@@ -249,8 +179,8 @@ function App() {
                 type="password" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Create Master Password" 
-                className="bg-matrix-dark-gray border-b border-matrix-green text-matrix-green w-full p-2 focus:outline-none focus:border-matrix-gold"
+                placeholder="Create password"
+                className="w-full bg-matrix-black border border-matrix-gold p-2 rounded text-white focus:border-matrix-gold focus:outline-none"
               />
             </div>
             
@@ -259,24 +189,30 @@ function App() {
                 type="password" 
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm Master Password" 
-                className="bg-matrix-dark-gray border-b border-matrix-green text-matrix-green w-full p-2 focus:outline-none focus:border-matrix-gold"
+                placeholder="Confirm password"
+                className="w-full bg-matrix-black border border-matrix-gold p-2 rounded text-white focus:border-matrix-gold focus:outline-none"
               />
             </div>
             
-            <button 
+            {authError && (
+              <div className="text-matrix-error text-sm bg-matrix-error bg-opacity-10 p-2 rounded border border-matrix-error border-opacity-30">
+                {authError}
+              </div>
+            )}
+            
+            <button
               onClick={handleSetupAuth}
               disabled={isLoading}
-              className="w-full bg-matrix-green bg-opacity-20 hover:bg-opacity-30 text-matrix-gold py-2 px-4 rounded transition-colors duration-200 flex items-center justify-center"
+              className="w-full flex items-center justify-center bg-matrix-gold bg-opacity-20 hover:bg-opacity-30 text-matrix-gold p-2 rounded"
             >
-              {isLoading ? 'Setting up...' : 'Create Secure Library'}
-              {!isLoading && <KeyIcon className="ml-2" size={16} />}
+              {isLoading ? 'Setting up...' : (
+                <>
+                  <KeyIcon size={16} className="mr-2" />
+                  Set Password
+                </>
+              )}
             </button>
           </div>
-          
-          {authError && (
-            <p className="text-matrix-error text-sm mt-4 text-center">{authError}</p>
-          )}
         </div>
       </div>
     )
@@ -285,37 +221,51 @@ function App() {
   function renderAuthenticationScreen() {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-matrix-black">
-        <div className="bg-matrix-dark-gray p-8 rounded-lg shadow-lg w-96 border border-matrix-green">
-          <div className="flex items-center justify-center mb-6">
-            <LockIcon className="text-matrix-gold mr-2" size={28} />
-            <h1 className="text-matrix-gold text-2xl font-bold">MotherCore</h1>
+        <MatrixRain colorScheme="gold" />
+        <div className="z-10 max-w-md p-8 bg-matrix-dark-gray bg-opacity-80 rounded-lg border border-matrix-gold shadow-matrix">
+          <div className="flex justify-center mb-6">
+            <LockIcon size={48} className="text-matrix-gold" />
           </div>
           
-          <div className="relative mb-6">
-            <input 
-              type="password" 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleAuthentication()}
-              placeholder="Enter Master Password" 
-              className="bg-matrix-dark-gray border-b border-matrix-green text-matrix-green w-full p-2 pr-10 focus:outline-none focus:border-matrix-gold"
-            />
-            <button 
+          <h2 className="text-2xl text-matrix-gold font-bold text-center mb-2">
+            Authentication Required
+          </h2>
+          
+          <p className="text-matrix-amber mb-6 text-center">
+            Enter your password to access your digital library
+          </p>
+          
+          <div className="space-y-4">
+            <div className="relative">
+              <input 
+                type="password" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAuthentication()}
+                placeholder="Enter password"
+                className="w-full bg-matrix-black border border-matrix-gold p-2 rounded text-white focus:border-matrix-gold focus:outline-none"
+              />
+            </div>
+            
+            {authError && (
+              <div className="text-matrix-error text-sm bg-matrix-error bg-opacity-10 p-2 rounded border border-matrix-error border-opacity-30">
+                {authError}
+              </div>
+            )}
+            
+            <button
               onClick={handleAuthentication}
               disabled={isLoading}
-              className="absolute right-0 top-2 text-matrix-green hover:text-matrix-gold transition-colors duration-200"
+              className="w-full flex items-center justify-center bg-matrix-gold bg-opacity-20 hover:bg-opacity-30 text-matrix-gold p-2 rounded"
             >
-              <UnlockIcon size={20} />
+              {isLoading ? 'Authenticating...' : (
+                <>
+                  <UnlockIcon size={16} className="mr-2" />
+                  Unlock
+                </>
+              )}
             </button>
           </div>
-          
-          {authError && (
-            <p className="text-matrix-error text-sm mt-2 text-center">{authError}</p>
-          )}
-          
-          {isLoading && (
-            <p className="text-matrix-amber text-sm mt-2 text-center">Authenticating...</p>
-          )}
         </div>
       </div>
     )
@@ -323,70 +273,47 @@ function App() {
 
   function renderMainApplication() {
     return (
-      <div className="h-screen bg-matrix-black text-matrix-green">
-        <div className="grid grid-cols-[250px_1fr] h-full">
-          {/* Sidebar Navigation */}
-          <div className="bg-matrix-dark-gray p-4 border-r border-matrix-green border-opacity-50 overflow-y-auto">
-            <NavigationTree 
-              onSelectOrganization={handleSelectOrganization}
-              onSelectProject={handleSelectProject}
-              onSelectBook={handleSelectBook}
-              onSelectChapter={handleSelectChapter}
-              onAddOrganization={() => setShowCreateOrgForm(true)}
-              onAddProject={handleAddProject}
-              onAddBook={handleAddBook}
-              onAddChapter={handleAddChapter}
-            />
+      <div className="app-container">
+        {/* Matrix Rain Effect in background */}
+        <div className="matrix-background">
+          <MatrixRain colorScheme="gold" />
+        </div>
+        
+        {/* Main App Content */}
+        <div className="app-content">
+          {/* Sidebar */}
+          <div className="sidebar">
+            <Sidebar onSelectItem={handleSelectItem} />
           </div>
-
+          
           {/* Main Content Area */}
-          <div className="overflow-auto">
-            <ContentContainer 
-              selectedType={selectedType}
-              selectedId={selectedId}
-            />
+          <div className="main-content">
+            {/* Title Bar */}
+            <TitleBar />
+            
+            {/* Content Area */}
+            <div className="content-area">
+              <MainContent 
+                selectedItem={selectedItem}
+                selectedType={selectedType}
+              />
+            </div>
+            
+            {/* Status Bar */}
+            <div className="status-bar">
+              <div className="flex items-center text-amber text-sm">
+                <span>Words: {wordCount}</span>
+                <span className="mx-2">|</span>
+                <span>Characters: {charCount}</span>
+              </div>
+              <div className="text-amber text-sm">
+                {currentTime}
+              </div>
+            </div>
           </div>
         </div>
         
-        {/* Modals */}
-        {showCreateOrgForm && (
-          <div className="fixed inset-0 bg-matrix-black bg-opacity-80 flex items-center justify-center z-10">
-            <CreateOrganizationForm 
-              onClose={() => setShowCreateOrgForm(false)} 
-              onSuccess={handleCreateOrganizationSuccess}
-            />
-          </div>
-        )}
-        
-        {showCreateProjectForm && activeOrgId && (
-          <div className="fixed inset-0 bg-matrix-black bg-opacity-80 flex items-center justify-center z-10">
-            <CreateProjectForm 
-              organizationId={activeOrgId}
-              onClose={() => setShowCreateProjectForm(false)} 
-              onSuccess={handleProjectCreated}
-            />
-          </div>
-        )}
-        
-        {showCreateBookForm && activeProjectId && (
-          <div className="fixed inset-0 bg-matrix-black bg-opacity-80 flex items-center justify-center z-10">
-            <CreateBookForm 
-              projectId={activeProjectId}
-              onClose={() => setShowCreateBookForm(false)} 
-              onSuccess={handleBookCreated}
-            />
-          </div>
-        )}
-        
-        {showCreateChapterForm && activeBookId && (
-          <div className="fixed inset-0 bg-matrix-black bg-opacity-80 flex items-center justify-center z-10">
-            <CreateChapterForm 
-              bookId={activeBookId}
-              onClose={() => setShowCreateChapterForm(false)} 
-              onSuccess={handleChapterCreated}
-            />
-          </div>
-        )}
+        <TestComponent />
       </div>
     )
   }
@@ -394,12 +321,11 @@ function App() {
   // Show loading state while checking authentication status
   if (isLoading && !isAuthenticated) {
     return (
-      <>
-        <MatrixRain />
-        <div className="fixed inset-0 flex items-center justify-center bg-matrix-black bg-opacity-50">
-          <div className="text-matrix-green text-xl">Initializing MotherCore...</div>
-        </div>
-      </>
+      <div className="fixed inset-0 flex items-center justify-center bg-matrix-black">
+        <MatrixRain colorScheme="gold" />
+        <div className="z-10 text-white text-xl">Initializing MotherCore...</div>
+        <TestComponent />
+      </div>
     )
   }
 
@@ -407,17 +333,34 @@ function App() {
   if (preloadError) {
     return (
       <>
-        <MatrixRain />
         {renderPreloadErrorScreen()}
+        <TestComponent />
+      </>
+    )
+  }
+
+  // Render the appropriate screen based on authentication state
+  if (authSetupNeeded) {
+    return (
+      <>
+        {renderAuthSetupScreen()}
+        <TestComponent />
+      </>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <>
+        {renderAuthenticationScreen()}
+        <TestComponent />
       </>
     )
   }
 
   return (
     <>
-      <MatrixRain characterSet="mixed" colorScheme="gradient" />
-      {authSetupNeeded ? renderAuthSetupScreen() : 
-        !isAuthenticated ? renderAuthenticationScreen() : renderMainApplication()}
+      {renderMainApplication()}
     </>
   )
 }

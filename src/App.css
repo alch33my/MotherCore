@@ -1,8 +1,142 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+/* Reset and base styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background-color: #0a0a0a;
+  color: #ffffff;
+  font-family: 'Courier New', monospace;
+}
+
+/* Main layout container */
+.app-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+}
+
+/* Matrix rain background */
+.matrix-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Main content area */
+.main-content {
+  position: relative;
+  display: flex;
+  flex: 1;
+  z-index: 1;
+  height: calc(100vh - 32px); /* Full height minus status bar */
+}
+
+/* Sidebar */
+.sidebar {
+  width: 250px;
+  background-color: rgba(10, 10, 10, 0.85);
+  border-right: 1px solid rgba(255, 215, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.sidebar-header {
+  padding: 16px;
+  border-bottom: 1px solid rgba(255, 215, 0, 0.3);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+/* Content area */
+.content-area {
+  flex: 1;
+  background-color: rgba(10, 10, 10, 0.85);
+  overflow-y: auto;
+  height: 100%;
+}
+
+/* Status bar */
+.status-bar {
+  height: 32px;
+  background-color: rgba(10, 10, 10, 0.9);
+  border-top: 1px solid rgba(255, 215, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 1;
+}
+
+/* Modal overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 215, 0, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 215, 0, 0.5);
+}
+
+/* Matrix theme styles */
+.shadow-matrix {
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
+}
+
+/* Text colors */
+.text-gold {
+  color: #ffd700;
+}
+
+.text-amber {
+  color: #ffb000;
+}
+
+.text-white {
+  color: #ffffff;
 }
 
 .logo {

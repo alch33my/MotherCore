@@ -11,13 +11,11 @@ interface MatrixRainProps {
 }
 
 function MatrixRain({ 
-  width = window.innerWidth, 
-  height = window.innerHeight, 
   density = 0.5,
   speed = 50,
   fontSize = 16,
   characterSet = 'mixed',
-  colorScheme = 'gradient'
+  colorScheme = 'gold'
 }: MatrixRainProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -28,8 +26,14 @@ function MatrixRain({
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    canvas.width = width
-    canvas.height = height
+    // Set canvas to full window size
+    const resizeCanvas = () => {
+      canvas.width = window.innerWidth
+      canvas.height = window.innerHeight
+    }
+    
+    resizeCanvas()
+    window.addEventListener('resize', resizeCanvas)
 
     // Character sets based on options
     let characters = '01'
@@ -68,7 +72,7 @@ function MatrixRain({
           const b = Math.floor(65 * position)
           return `rgb(${r}, ${g}, ${b})`
         default:
-          return '#00ff41'
+          return '#ffd700' // Default to gold
       }
     }
 
@@ -133,14 +137,24 @@ function MatrixRain({
     return () => {
       clearInterval(animationFrame)
       window.removeEventListener('resize', handleResize)
+      window.removeEventListener('resize', resizeCanvas)
     }
-  }, [width, height, density, speed, fontSize, characterSet, colorScheme])
+  }, [density, speed, fontSize, characterSet, colorScheme])
 
   return (
     <canvas 
       ref={canvasRef} 
-      className="fixed top-0 left-0 z-[-1] pointer-events-none" 
-      style={{ width: '100%', height: '100%' }}
+      className="matrix-rain"
+      style={{ 
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none',
+        zIndex: 0,
+        opacity: 0.4
+      }}
     />
   )
 }
