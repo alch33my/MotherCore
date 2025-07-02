@@ -9,7 +9,7 @@ import TitleBar from './renderer/components/layout/TitleBar'
 import BottomBar from './renderer/components/layout/BottomBar'
 import SettingsPage from './renderer/components/settings/SettingsPage'
 import AuthScreen from './renderer/components/auth/AuthScreen' // Import AuthScreen
-import TestComponent from './renderer/components/test-component'
+
 
 // Update the type definition at the top of the file
 type ContentType = 'organization' | 'project' | 'book' | 'chapter' | 'page' | null
@@ -88,6 +88,7 @@ function App() {
     
     try {
       setIsLoading(true)
+      setAuthError('')
       
       if (authSetupNeeded) {
         // Setup new auth
@@ -95,25 +96,27 @@ function App() {
         if (result.success) {
           setAuthSetupNeeded(false)
           setIsAuthenticated(true)
-          setAuthError('')
         } else {
           setAuthError(result.error || 'Failed to set up authentication')
+          setIsLoading(false)
         }
       } else {
         // Authenticate existing user
         const result = await window.electronAPI.authenticate(password)
         if (result) {
           setIsAuthenticated(true)
-          setAuthError('')
         } else {
           setAuthError('Invalid password')
+          setIsLoading(false)
         }
       }
     } catch (err) {
+      console.error('Auth error:', err)
       setAuthError('Authentication failed')
-      window.electronAPI.logError(String(err))
-    } finally {
       setIsLoading(false)
+      if (window.electronAPI) {
+        window.electronAPI.logError(String(err))
+      }
     }
   }
   
@@ -212,7 +215,7 @@ function App() {
           <SettingsPage onClose={() => setShowSettings(false)} />
         )}
         
-        <TestComponent />
+        
       </div>
     )
   }
@@ -223,7 +226,6 @@ function App() {
       <div className="fixed inset-0 flex items-center justify-center bg-matrix-black">
         <MatrixRain colorScheme="gold" />
         <div className="z-10 text-white text-xl">Initializing MotherCore...</div>
-        <TestComponent />
       </div>
     )
   }
@@ -233,7 +235,6 @@ function App() {
     return (
       <>
         {renderPreloadErrorScreen()}
-        <TestComponent />
       </>
     )
   }
@@ -246,7 +247,6 @@ function App() {
           onAuthenticated={handleAuthenticated}
           isSignUp={authSetupNeeded}
         />
-        <TestComponent />
       </>
     )
   }

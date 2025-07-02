@@ -17,6 +17,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated, isSignUp = fal
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    
     setError('');
     setIsLoading(true);
 
@@ -32,11 +34,16 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated, isSignUp = fal
       return;
     }
 
-    // Simulate authentication
-    setTimeout(() => {
+    try {
+      // Use setTimeout to prevent UI freezing during authentication
+      setTimeout(() => {
+        onAuthenticated(password);
+        setIsLoading(false);
+      }, 1000);
+    } catch (err) {
+      setError('Authentication failed');
       setIsLoading(false);
-      onAuthenticated(password);
-    }, 1000);
+    }
   };
 
   return (

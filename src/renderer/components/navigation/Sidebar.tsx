@@ -14,6 +14,7 @@ import {
   Clock,
   Tag
 } from 'lucide-react';
+import NavigationTree from './navigation-tree';
 
 interface SidebarProps {
   onSelectItem: (item: any, type: string) => void;
@@ -110,6 +111,91 @@ const Sidebar: React.FC<SidebarProps> = ({
     }
   };
 
+  // Navigation tree handlers
+  const handleSelectOrganization = (orgId: string) => {
+    const org = organizations.find(o => o.id === orgId);
+    if (org) {
+      onSelectItem(org, 'organization');
+    }
+  };
+
+  const handleSelectProject = (projectId: string) => {
+    // Fetch project details and pass to onSelectItem
+    if (window.electronAPI) {
+      window.electronAPI.getProjects().then(result => {
+        if (result.success && result.projects) {
+          const project = result.projects.find((p: any) => p.id === projectId);
+          if (project) {
+            onSelectItem(project, 'project');
+          }
+        }
+      });
+    }
+  };
+
+  const handleSelectBook = (bookId: string) => {
+    if (window.electronAPI) {
+      window.electronAPI.getBooks().then(result => {
+        if (result.success && result.books) {
+          const book = result.books.find((b: any) => b.id === bookId);
+          if (book) {
+            onSelectItem(book, 'book');
+          }
+        }
+      });
+    }
+  };
+
+  const handleSelectChapter = (chapterId: string) => {
+    if (window.electronAPI) {
+      window.electronAPI.getChapters().then(result => {
+        if (result.success && result.chapters) {
+          const chapter = result.chapters.find((c: any) => c.id === chapterId);
+          if (chapter) {
+            onSelectItem(chapter, 'chapter');
+          }
+        }
+      });
+    }
+  };
+
+  const handleSelectPage = (pageId: string) => {
+    if (window.electronAPI) {
+      window.electronAPI.getPages().then(result => {
+        if (result.success && result.pages) {
+          const page = result.pages.find((p: any) => p.id === pageId);
+          if (page) {
+            onSelectItem(page, 'page');
+          }
+        }
+      });
+    }
+  };
+
+  const handleAddOrganization = () => {
+    setShowCreateForm(true);
+  };
+
+  const handleAddProject = (orgId: string) => {
+    const org = organizations.find(o => o.id === orgId);
+    if (org) {
+      onSelectItem(org, 'organization');
+      // You can add logic to show project creation modal here
+    }
+  };
+
+  const handleAddBook = (projectId: string) => {
+    // Logic to show book creation modal
+  };
+
+  const handleAddChapter = (bookId: string) => {
+    // Logic to show chapter creation modal
+  };
+
+  const handleAddPage = (chapterId: string) => {
+    // Logic to show page creation modal
+  };
+
   // Render the Library Sidebar when in library view
   if (isLibraryView && selectedOrganization) {
     return (
@@ -159,60 +245,18 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Navigation Tree */}
         <div className="sidebar-navigation">
-          <div className="nav-section">
-            <div className="nav-section-header">
-              <Folder className="w-4 h-4" />
-              <span>Projects</span>
-              <button className="add-item-button">
-                <Plus className="w-3 h-3" />
-              </button>
-            </div>
-            
-            <div className="nav-items">
-              <div className="nav-item empty">
-                <span className="empty-text">No projects yet</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="nav-section">
-            <div className="nav-section-header">
-              <Clock className="w-4 h-4" />
-              <span>Recent</span>
-            </div>
-            
-            <div className="nav-items">
-              <div className="nav-item empty">
-                <span className="empty-text">No recent activity</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="nav-section">
-            <div className="nav-section-header">
-              <Star className="w-4 h-4" />
-              <span>Favorites</span>
-            </div>
-            
-            <div className="nav-items">
-              <div className="nav-item empty">
-                <span className="empty-text">No favorites yet</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="nav-section">
-            <div className="nav-section-header">
-              <Tag className="w-4 h-4" />
-              <span>Tags</span>
-            </div>
-            
-            <div className="nav-items">
-              <div className="nav-item empty">
-                <span className="empty-text">No tags yet</span>
-              </div>
-            </div>
-          </div>
+          <NavigationTree
+            onSelectOrganization={handleSelectOrganization}
+            onSelectProject={handleSelectProject}
+            onSelectBook={handleSelectBook}
+            onSelectChapter={handleSelectChapter}
+            onSelectPage={handleSelectPage}
+            onAddOrganization={handleAddOrganization}
+            onAddProject={handleAddProject}
+            onAddBook={handleAddBook}
+            onAddChapter={handleAddChapter}
+            onAddPage={handleAddPage}
+          />
         </div>
       </div>
     );
@@ -300,7 +344,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
 
-          {/* Organizations List */}
+          {/* Organizations List or Full Tree */}
           {loading ? (
             <div className="loading">
               <div>Loading organizations...</div>
@@ -312,41 +356,18 @@ const Sidebar: React.FC<SidebarProps> = ({
               <div className="text-matrix-amber/30 text-xs">Create your first organization to get started</div>
             </div>
           ) : (
-            <div className="space-y-1">
-              {organizations.map((org) => (
-                <div key={org.id} className="fade-in">
-                  <div
-                    className={`tree-item ${expandedItems.has(org.id) ? 'expanded' : ''}`}
-                    onClick={() => onSelectItem(org, 'organization')}
-                  >
-                    <button
-                      onClick={(e) => toggleExpand(org.id, e)}
-                      className={`tree-item-chevron ${expandedItems.has(org.id) ? 'expanded' : ''}`}
-                    >
-                      {expandedItems.has(org.id) ? (
-                        <ChevronDown className="w-4 h-4" />
-                      ) : (
-                        <ChevronRight className="w-4 h-4" />
-                      )}
-                    </button>
-                    <Users className="tree-item-icon" />
-                    <span className="tree-item-text">{org.name}</span>
-                    <Plus className="tree-item-add" onClick={(e) => {
-                      e.stopPropagation();
-                      onSelectItem(org, 'organization');
-                    }} />
-                  </div>
-
-                  {expandedItems.has(org.id) && (
-                    <div className="tree-children fade-in">
-                      <div className="text-matrix-amber/50 text-xs py-2 italic">
-                        Projects will appear here...
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+            <NavigationTree
+              onSelectOrganization={handleSelectOrganization}
+              onSelectProject={handleSelectProject}
+              onSelectBook={handleSelectBook}
+              onSelectChapter={handleSelectChapter}
+              onSelectPage={handleSelectPage}
+              onAddOrganization={handleAddOrganization}
+              onAddProject={handleAddProject}
+              onAddBook={handleAddBook}
+              onAddChapter={handleAddChapter}
+              onAddPage={handleAddPage}
+            />
           )}
         </div>
       </div>
