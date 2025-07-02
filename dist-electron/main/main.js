@@ -118,13 +118,27 @@ class DatabaseManager {
   }
   // Organization methods
   createOrganization(organization) {
+    console.log("DatabaseManager: Creating organization", organization);
     const { id, name, description = null, color = null, icon = null } = organization;
-    const stmt = this.db.prepare(`
-      INSERT INTO organizations (id, name, description, color, icon)
-      VALUES (?, ?, ?, ?, ?)
-    `);
-    const result = stmt.run(id, name, description, color, icon);
-    return result;
+    try {
+      const transaction = this.db.transaction(() => {
+        const stmt = this.db.prepare(`
+          INSERT INTO organizations (id, name, description, color, icon)
+          VALUES (?, ?, ?, ?, ?)
+        `);
+        const result2 = stmt.run(id, name, description, color, icon);
+        console.log("Organization created in database with result:", result2);
+        const insertedOrg = this.db.prepare("SELECT * FROM organizations WHERE id = ?").get(id);
+        console.log("Inserted organization verification:", insertedOrg);
+        return insertedOrg;
+      });
+      const result = transaction();
+      this.logDbState();
+      return result;
+    } catch (error) {
+      console.error("Database error in createOrganization:", error);
+      throw error;
+    }
   }
   getOrganizations() {
     return this.db.prepare("SELECT * FROM organizations ORDER BY name").all();
@@ -146,18 +160,55 @@ class DatabaseManager {
   }
   // Project methods
   createProject(project) {
+    console.log("DatabaseManager: Creating project", project);
     const { id, organization_id, name, description = null, color = null } = project;
-    const stmt = this.db.prepare(`
-      INSERT INTO projects (id, organization_id, name, description, color)
-      VALUES (?, ?, ?, ?, ?)
-    `);
-    return stmt.run(id, organization_id, name, description, color);
+    try {
+      const transaction = this.db.transaction(() => {
+        const org = this.db.prepare("SELECT id FROM organizations WHERE id = ?").get(organization_id);
+        if (!org) {
+          throw new Error(`Organization with ID ${organization_id} does not exist`);
+        }
+        const stmt = this.db.prepare(`
+          INSERT INTO projects (id, organization_id, name, description, color)
+          VALUES (?, ?, ?, ?, ?)
+        `);
+        const result2 = stmt.run(id, organization_id, name, description, color);
+        console.log("Project created in database with result:", result2);
+        const insertedProject = this.db.prepare("SELECT * FROM projects WHERE id = ?").get(id);
+        console.log("Inserted project verification:", insertedProject);
+        return insertedProject;
+      });
+      const result = transaction();
+      this.logDbState();
+      return result;
+    } catch (error) {
+      console.error("Database error in createProject:", error);
+      throw error;
+    }
   }
   getProjects(organizationId) {
-    if (organizationId) {
-      return this.db.prepare("SELECT * FROM projects WHERE organization_id = ? ORDER BY name").all(organizationId);
+    console.log(`Getting projects${organizationId ? ` for org ${organizationId}` : " (all)"}`);
+    try {
+      let projects;
+      if (organizationId) {
+        const org = this.db.prepare("SELECT id FROM organizations WHERE id = ?").get(organizationId);
+        if (!org) {
+          console.error(`Organization with ID ${organizationId} not found when getting projects`);
+          return [];
+        }
+        projects = this.db.prepare("SELECT * FROM projects WHERE organization_id = ? ORDER BY name").all(organizationId);
+      } else {
+        projects = this.db.prepare("SELECT * FROM projects ORDER BY name").all();
+      }
+      console.log(
+        `Found ${projects.length} projects:`,
+        projects.map((p) => ({ id: p.id, name: p.name, org_id: p.organization_id }))
+      );
+      return projects;
+    } catch (error) {
+      console.error("Error in getProjects:", error);
+      return [];
     }
-    return this.db.prepare("SELECT * FROM projects ORDER BY name").all();
   }
   getProject(id) {
     return this.db.prepare("SELECT * FROM projects WHERE id = ?").get(id);
@@ -176,18 +227,54 @@ class DatabaseManager {
   }
   // Book methods
   createBook(book) {
+    console.log("DatabaseManager: Creating book", book);
     const { id, project_id, name, description = null, cover_image = null, spine_color = null, position = null } = book;
-    const stmt = this.db.prepare(`
-      INSERT INTO books (id, project_id, name, description, cover_image, spine_color, position)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
-    return stmt.run(id, project_id, name, description, cover_image, spine_color, position);
+    try {
+      const transaction = this.db.transaction(() => {
+        const project = this.db.prepare("SELECT id FROM projects WHERE id = ?").get(project_id);
+        if (!project) {
+          throw new Error(`Project with ID ${project_id} does not exist`);
+        }
+        const stmt = this.db.prepare(`
+          INSERT INTO books (id, project_id, name, description, cover_image, spine_color, position)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `);
+        const result2 = stmt.run(id, project_id, name, description, cover_image, spine_color, position);
+        console.log("Book created in database with result:", result2);
+        const insertedBook = this.db.prepare("SELECT * FROM books WHERE id = ?").get(id);
+        console.log("Inserted book verification:", insertedBook);
+        return insertedBook;
+      });
+      const result = transaction();
+      return result;
+    } catch (error) {
+      console.error("Database error in createBook:", error);
+      throw error;
+    }
   }
   getBooks(projectId) {
-    if (projectId) {
-      return this.db.prepare("SELECT * FROM books WHERE project_id = ? ORDER BY position, name").all(projectId);
+    console.log(`Getting books${projectId ? ` for project ${projectId}` : " (all)"}`);
+    try {
+      let books;
+      if (projectId) {
+        const project = this.db.prepare("SELECT id FROM projects WHERE id = ?").get(projectId);
+        if (!project) {
+          console.error(`Project with ID ${projectId} not found when getting books`);
+          return [];
+        }
+        books = this.db.prepare("SELECT * FROM books WHERE project_id = ? ORDER BY position, name").all(projectId);
+      } else {
+        books = this.db.prepare("SELECT * FROM books ORDER BY position, name").all();
+      }
+      console.log(
+        `Found ${books.length} books:`,
+        books.map((b) => ({ id: b.id, name: b.name, project_id: b.project_id }))
+      );
+      return books;
+    } catch (error) {
+      console.error("Error in getBooks:", error);
+      return [];
     }
-    return this.db.prepare("SELECT * FROM books ORDER BY position, name").all();
   }
   getBook(id) {
     return this.db.prepare("SELECT * FROM books WHERE id = ?").get(id);
@@ -206,18 +293,54 @@ class DatabaseManager {
   }
   // Chapter methods
   createChapter(chapter) {
+    console.log("DatabaseManager: Creating chapter", chapter);
     const { id, book_id, name, position = null } = chapter;
-    const stmt = this.db.prepare(`
-      INSERT INTO chapters (id, book_id, name, position)
-      VALUES (?, ?, ?, ?)
-    `);
-    return stmt.run(id, book_id, name, position);
+    try {
+      const transaction = this.db.transaction(() => {
+        const book = this.db.prepare("SELECT id FROM books WHERE id = ?").get(book_id);
+        if (!book) {
+          throw new Error(`Book with ID ${book_id} does not exist`);
+        }
+        const stmt = this.db.prepare(`
+          INSERT INTO chapters (id, book_id, name, position)
+          VALUES (?, ?, ?, ?)
+        `);
+        const result2 = stmt.run(id, book_id, name, position);
+        console.log("Chapter created in database with result:", result2);
+        const insertedChapter = this.db.prepare("SELECT * FROM chapters WHERE id = ?").get(id);
+        console.log("Inserted chapter verification:", insertedChapter);
+        return insertedChapter;
+      });
+      const result = transaction();
+      return result;
+    } catch (error) {
+      console.error("Database error in createChapter:", error);
+      throw error;
+    }
   }
   getChapters(bookId) {
-    if (bookId) {
-      return this.db.prepare("SELECT * FROM chapters WHERE book_id = ? ORDER BY position, name").all(bookId);
+    console.log(`Getting chapters${bookId ? ` for book ${bookId}` : " (all)"}`);
+    try {
+      let chapters;
+      if (bookId) {
+        const book = this.db.prepare("SELECT id FROM books WHERE id = ?").get(bookId);
+        if (!book) {
+          console.error(`Book with ID ${bookId} not found when getting chapters`);
+          return [];
+        }
+        chapters = this.db.prepare("SELECT * FROM chapters WHERE book_id = ? ORDER BY position, name").all(bookId);
+      } else {
+        chapters = this.db.prepare("SELECT * FROM chapters ORDER BY position, name").all();
+      }
+      console.log(
+        `Found ${chapters.length} chapters:`,
+        chapters.map((c) => ({ id: c.id, name: c.name, book_id: c.book_id }))
+      );
+      return chapters;
+    } catch (error) {
+      console.error("Error in getChapters:", error);
+      return [];
     }
-    return this.db.prepare("SELECT * FROM chapters ORDER BY position, name").all();
   }
   getChapter(id) {
     return this.db.prepare("SELECT * FROM chapters WHERE id = ?").get(id);
@@ -236,42 +359,113 @@ class DatabaseManager {
   }
   // Page methods
   createPage(page) {
+    console.log("DatabaseManager: Creating page", page);
     const { id, chapter_id, title, content = null, content_text = null, page_type = "note", tags = null, position = null } = page;
-    const stmt = this.db.prepare(`
-      INSERT INTO pages (id, chapter_id, title, content, content_text, page_type, tags, position)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    const contentStr = content ? typeof content === "object" ? JSON.stringify(content) : content : null;
-    return stmt.run(id, chapter_id, title, contentStr, content_text, page_type, tags, position);
+    try {
+      const transaction = this.db.transaction(() => {
+        const chapter = this.db.prepare("SELECT id FROM chapters WHERE id = ?").get(chapter_id);
+        if (!chapter) {
+          throw new Error(`Chapter with ID ${chapter_id} does not exist`);
+        }
+        const contentStr = content ? typeof content === "object" ? JSON.stringify(content) : content : null;
+        const stmt = this.db.prepare(`
+          INSERT INTO pages (id, chapter_id, title, content, content_text, page_type, tags, position)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        const result2 = stmt.run(id, chapter_id, title, contentStr, content_text, page_type, tags, position);
+        console.log("Page created in database with result:", result2);
+        const insertedPage = this.db.prepare("SELECT * FROM pages WHERE id = ?").get(id);
+        console.log("Inserted page verification:", insertedPage);
+        return insertedPage;
+      });
+      const result = transaction();
+      return result;
+    } catch (error) {
+      console.error("Database error in createPage:", error);
+      throw error;
+    }
   }
   getPages(chapterId) {
-    if (chapterId) {
-      return this.db.prepare("SELECT id, chapter_id, title, page_type, tags, position, created_at, updated_at FROM pages WHERE chapter_id = ? ORDER BY position, title").all(chapterId);
+    console.log(`Getting pages${chapterId ? ` for chapter ${chapterId}` : " (all)"}`);
+    try {
+      let pages;
+      if (chapterId) {
+        const chapter = this.db.prepare("SELECT id FROM chapters WHERE id = ?").get(chapterId);
+        if (!chapter) {
+          console.error(`Chapter with ID ${chapterId} not found when getting pages`);
+          return [];
+        }
+        pages = this.db.prepare("SELECT * FROM pages WHERE chapter_id = ? ORDER BY position, title").all(chapterId);
+      } else {
+        pages = this.db.prepare("SELECT * FROM pages ORDER BY position, title").all();
+      }
+      console.log(
+        `Found ${pages.length} pages:`,
+        pages.map((p) => ({ id: p.id, title: p.title, chapter_id: p.chapter_id }))
+      );
+      return pages;
+    } catch (error) {
+      console.error("Error in getPages:", error);
+      return [];
     }
-    return this.db.prepare("SELECT id, chapter_id, title, page_type, tags, position, created_at, updated_at FROM pages ORDER BY position, title").all();
   }
   getPage(id) {
     return this.db.prepare("SELECT * FROM pages WHERE id = ?").get(id);
   }
   getPageContent(id) {
-    const result = this.db.prepare("SELECT content FROM pages WHERE id = ?").get(id);
-    if (!result) {
-      return null;
-    }
+    console.log(`Getting content for page ${id}`);
     try {
-      return JSON.parse(result.content);
-    } catch {
-      return result.content;
+      const page = this.db.prepare("SELECT id FROM pages WHERE id = ?").get(id);
+      if (!page) {
+        console.error(`Page with ID ${id} not found when getting content`);
+        return null;
+      }
+      const result = this.db.prepare("SELECT content FROM pages WHERE id = ?").get(id);
+      if (!result) {
+        console.log(`No content found for page ${id}`);
+        return null;
+      }
+      if (!result.content) {
+        console.log(`Content is null for page ${id}`);
+        return null;
+      }
+      try {
+        const parsedContent = JSON.parse(result.content);
+        console.log(`Successfully parsed JSON content for page ${id}`);
+        return parsedContent;
+      } catch (parseError) {
+        console.log(`Content for page ${id} is not JSON, returning raw content`);
+        return result.content;
+      }
+    } catch (error) {
+      console.error(`Error getting content for page ${id}:`, error);
+      return null;
     }
   }
   updatePageContent(id, content, plainText) {
-    const contentStr = typeof content === "object" ? JSON.stringify(content) : content;
-    const stmt = this.db.prepare(`
-      UPDATE pages
-      SET content = ?, content_text = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `);
-    return stmt.run(contentStr, plainText, id);
+    console.log(`Updating content for page ${id}`);
+    try {
+      const transaction = this.db.transaction(() => {
+        const page = this.db.prepare("SELECT id FROM pages WHERE id = ?").get(id);
+        if (!page) {
+          throw new Error(`Page with ID ${id} does not exist`);
+        }
+        const contentStr = typeof content === "object" ? JSON.stringify(content) : content;
+        const stmt = this.db.prepare(`
+          UPDATE pages
+          SET content = ?, content_text = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `);
+        const result2 = stmt.run(contentStr, plainText, id);
+        console.log(`Page content updated with result:`, result2);
+        return result2;
+      });
+      const result = transaction();
+      return result;
+    } catch (error) {
+      console.error(`Error updating content for page ${id}:`, error);
+      throw error;
+    }
   }
   updatePage(page) {
     const { id, chapter_id, title, page_type = "note", tags = null, position = null } = page;
@@ -287,6 +481,44 @@ class DatabaseManager {
   }
   close() {
     this.db.close();
+  }
+  // Debug method to log database state
+  logDbState() {
+    console.log("\n==== DATABASE STATE ====");
+    try {
+      const orgs = this.db.prepare("SELECT * FROM organizations").all();
+      console.log(`Organizations (${orgs.length}):`);
+      orgs.forEach((org) => {
+        console.log(`- ${org.id}: ${org.name}`);
+      });
+      const projects = this.db.prepare("SELECT * FROM projects").all();
+      console.log(`
+Projects (${projects.length}):`);
+      projects.forEach((proj) => {
+        console.log(`- ${proj.id}: ${proj.name} (org: ${proj.organization_id})`);
+      });
+      const books = this.db.prepare("SELECT * FROM books").all();
+      console.log(`
+Books (${books.length}):`);
+      books.forEach((book) => {
+        console.log(`- ${book.id}: ${book.name} (project: ${book.project_id})`);
+      });
+      const chapters = this.db.prepare("SELECT * FROM chapters").all();
+      console.log(`
+Chapters (${chapters.length}):`);
+      chapters.forEach((chapter) => {
+        console.log(`- ${chapter.id}: ${chapter.name} (book: ${chapter.book_id})`);
+      });
+      const pages = this.db.prepare("SELECT * FROM pages").all();
+      console.log(`
+Pages (${pages.length}):`);
+      pages.forEach((page) => {
+        console.log(`- ${page.id}: ${page.title} (chapter: ${page.chapter_id})`);
+      });
+      console.log("==== END DATABASE STATE ====\n");
+    } catch (error) {
+      console.error("Error logging database state:", error);
+    }
   }
 }
 function getDefaultExportFromCjs(x) {
@@ -860,6 +1092,7 @@ function initializeApplication() {
     console.log("Initializing database...");
     dbManager = DatabaseManager.getInstance();
     console.log("Database initialized successfully");
+    dbManager.logDbState();
     electron.ipcMain.handle("minimizeWindow", () => {
       if (mainWindow) mainWindow.minimize();
       return true;
@@ -906,12 +1139,21 @@ function initializeApplication() {
     electron.ipcMain.handle("create-organization", async (_, data) => {
       try {
         const id = v4();
-        await dbManager.createOrganization({
+        console.log("Creating organization with data:", { id, ...data });
+        const result = await dbManager.createOrganization({
           id,
           ...data
         });
-        return { success: true, id };
+        console.log("Database operation result:", result);
+        const orgAfter = await dbManager.getOrganization(id);
+        console.log("Organization created successfully:", !!orgAfter);
+        if (orgAfter) {
+          return { success: true, id, organization: orgAfter };
+        } else {
+          return { success: false, error: "Organization creation failed - could not retrieve created organization" };
+        }
       } catch (error) {
+        console.error("Error creating organization:", error);
         return { success: false, error: error.message };
       }
     });
@@ -926,12 +1168,25 @@ function initializeApplication() {
     electron.ipcMain.handle("create-project", async (_, data) => {
       try {
         const id = v4();
-        await dbManager.createProject({
+        console.log("Creating project with data:", { id, ...data });
+        const orgBefore = await dbManager.getOrganization(data.organization_id);
+        console.log("Parent organization exists:", !!orgBefore);
+        const result = await dbManager.createProject({
           id,
           ...data
         });
-        return { success: true, id };
+        console.log("Database operation result:", result);
+        const projectAfter = await dbManager.getProject(id);
+        console.log("Project created successfully:", !!projectAfter);
+        if (projectAfter) {
+          console.log("Project data:", projectAfter);
+          return { success: true, id, project: projectAfter };
+        } else {
+          console.log("WARNING: Project could not be retrieved after creation");
+          return { success: false, error: "Project creation failed - could not retrieve created project" };
+        }
       } catch (error) {
+        console.error("Error creating project:", error);
         return { success: false, error: error.message };
       }
     });
@@ -946,12 +1201,21 @@ function initializeApplication() {
     electron.ipcMain.handle("create-book", async (_, data) => {
       try {
         const id = v4();
-        await dbManager.createBook({
+        console.log("Creating book with data:", { id, ...data });
+        const result = await dbManager.createBook({
           id,
           ...data
         });
-        return { success: true, id };
+        console.log("Database operation result:", result);
+        const bookAfter = await dbManager.getBook(id);
+        console.log("Book created successfully:", !!bookAfter);
+        if (bookAfter) {
+          return { success: true, id, book: bookAfter };
+        } else {
+          return { success: false, error: "Book creation failed - could not retrieve created book" };
+        }
       } catch (error) {
+        console.error("Error creating book:", error);
         return { success: false, error: error.message };
       }
     });
@@ -966,12 +1230,21 @@ function initializeApplication() {
     electron.ipcMain.handle("create-chapter", async (_, data) => {
       try {
         const id = v4();
-        await dbManager.createChapter({
+        console.log("Creating chapter with data:", { id, ...data });
+        const result = await dbManager.createChapter({
           id,
           ...data
         });
-        return { success: true, id };
+        console.log("Database operation result:", result);
+        const chapterAfter = await dbManager.getChapter(id);
+        console.log("Chapter created successfully:", !!chapterAfter);
+        if (chapterAfter) {
+          return { success: true, id, chapter: chapterAfter };
+        } else {
+          return { success: false, error: "Chapter creation failed - could not retrieve created chapter" };
+        }
       } catch (error) {
+        console.error("Error creating chapter:", error);
         return { success: false, error: error.message };
       }
     });
@@ -986,12 +1259,21 @@ function initializeApplication() {
     electron.ipcMain.handle("create-page", async (_, data) => {
       try {
         const id = v4();
-        await dbManager.createPage({
+        console.log("Creating page with data:", { id, ...data });
+        const result = await dbManager.createPage({
           id,
           ...data
         });
-        return { success: true, id };
+        console.log("Database operation result:", result);
+        const pageAfter = await dbManager.getPage(id);
+        console.log("Page created successfully:", !!pageAfter);
+        if (pageAfter) {
+          return { success: true, id, page: pageAfter };
+        } else {
+          return { success: false, error: "Page creation failed - could not retrieve created page" };
+        }
       } catch (error) {
+        console.error("Error creating page:", error);
         return { success: false, error: error.message };
       }
     });
@@ -1030,6 +1312,34 @@ function initializeApplication() {
     });
     electron.ipcMain.on("log-error", (_, error) => {
       console.error("Application Error:", error);
+    });
+    electron.ipcMain.handle("refresh-database", async () => {
+      try {
+        console.log("Refreshing database state");
+        dbManager.logDbState();
+        return { success: true };
+      } catch (error) {
+        console.error("Error refreshing database:", error);
+        return { success: false, error: error.message };
+      }
+    });
+    electron.ipcMain.handle("log-organization-projects", async (_, orgId) => {
+      try {
+        console.log(`
+=== Organization-Projects check for ${orgId} ===`);
+        const org = await dbManager.getOrganization(orgId);
+        console.log("Organization:", org ? `${org.id} - ${org.name}` : "Not found");
+        const projects = await dbManager.getProjects(orgId);
+        console.log(`Projects (${projects.length}):`);
+        projects.forEach((project, i) => {
+          console.log(`${i + 1}. ${project.id} - ${project.name} (org: ${project.organization_id})`);
+        });
+        console.log("=== End Organization-Projects check ===\n");
+        return { success: true, org, projects };
+      } catch (error) {
+        console.error("Error logging organization-projects:", error);
+        return { success: false, error: error.message };
+      }
     });
   } catch (error) {
     console.error("Error initializing application:", error);

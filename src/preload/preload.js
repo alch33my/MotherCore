@@ -44,6 +44,10 @@ const electronAPI = {
   // Logging and error handling
   logError: (error) => ipcRenderer.send('log-error', error),
   
+  // Debug methods
+  refreshDatabase: () => ipcRenderer.invoke('refresh-database'),
+  logOrganizationProjects: (orgId) => ipcRenderer.invoke('log-organization-projects', orgId),
+  
   // Utility to check if the API is available
   isElectronAPIAvailable: () => true
 }

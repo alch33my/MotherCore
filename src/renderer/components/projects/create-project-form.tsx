@@ -29,17 +29,27 @@ function CreateProjectForm({ organizationId, onClose, onSuccess }: CreateProject
     
     try {
       setIsSubmitting(true)
-      const result = await window.electronAPI.createProject({
+      
+      const formData = {
         organization_id: organizationId,
         name: projectName.trim(),
         description: projectDesc.trim() || null,
         color: projectColor
-      })
+      }
+      
+      console.log('Submitting project form data:', formData)
+      console.log('Organization ID:', organizationId)
+      
+      const result = await window.electronAPI.createProject(formData)
+      
+      console.log('Create project result:', result)
       
       if (result.success) {
+        console.log('Project created successfully with ID:', result.id)
         onSuccess()
         onClose()
       } else {
+        console.error('Failed to create project:', result.error)
         setError(result.error || 'Failed to create project')
       }
     } catch (err) {

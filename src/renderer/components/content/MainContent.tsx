@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Calendar, User, Hash, Book, Folder, Star, Tag, Clock, Plus, Download, Trash } from 'lucide-react';
+import { FileText, Calendar, User, Hash, Book, Folder, Star, Tag, Clock, Plus, Download, Trash, RefreshCw } from 'lucide-react';
 import PageEditor from './page-editor';
 
 interface MainContentProps {
@@ -27,12 +27,14 @@ function MainContent({ selectedItem, selectedType, onAddProject, onAddBook, onAd
 
     setLoading(true);
     setError(null);
+    console.log(`Loading content for ${selectedType} with ID ${selectedItem.id}`);
 
     try {
       switch (selectedType) {
         case 'organization':
           // Load projects
           const projectsResult = await window.electronAPI.getProjects(selectedItem.id);
+          console.log(`Retrieved ${projectsResult.projects?.length || 0} projects for org ${selectedItem.id}`, projectsResult);
           if (projectsResult.success) {
             setContent({
               ...selectedItem,
@@ -43,6 +45,7 @@ function MainContent({ selectedItem, selectedType, onAddProject, onAddBook, onAd
         case 'project':
           // Load books
           const booksResult = await window.electronAPI.getBooks(selectedItem.id);
+          console.log(`Retrieved ${booksResult.books?.length || 0} books for project ${selectedItem.id}`, booksResult);
           if (booksResult.success) {
             setContent({
               ...selectedItem,
@@ -53,6 +56,7 @@ function MainContent({ selectedItem, selectedType, onAddProject, onAddBook, onAd
         case 'book':
           // Load chapters
           const chaptersResult = await window.electronAPI.getChapters(selectedItem.id);
+          console.log(`Retrieved ${chaptersResult.chapters?.length || 0} chapters for book ${selectedItem.id}`, chaptersResult);
           if (chaptersResult.success) {
             setContent({
               ...selectedItem,
@@ -63,6 +67,7 @@ function MainContent({ selectedItem, selectedType, onAddProject, onAddBook, onAd
         case 'chapter':
           // Load pages
           const pagesResult = await window.electronAPI.getPages(selectedItem.id);
+          console.log(`Retrieved ${pagesResult.pages?.length || 0} pages for chapter ${selectedItem.id}`, pagesResult);
           if (pagesResult.success) {
             setContent({
               ...selectedItem,
@@ -73,6 +78,7 @@ function MainContent({ selectedItem, selectedType, onAddProject, onAddBook, onAd
         case 'page':
           // Load page content
           const pageResult = await window.electronAPI.getPageContent(selectedItem.id);
+          console.log(`Retrieved content for page ${selectedItem.id}`, pageResult);
           if (pageResult.success) {
             setContent({
               ...selectedItem,
@@ -155,6 +161,14 @@ function MainContent({ selectedItem, selectedType, onAddProject, onAddBook, onAd
           <span className="detail-type-badge">{selectedType}</span>
         </div>
         <div className="detail-actions">
+          <button 
+            className="detail-action-button"
+            onClick={loadContent}
+            title="Refresh content"
+          >
+            <RefreshCw className="w-4 h-4 mr-1" />
+            Refresh
+          </button>
           <button className="detail-action-button">
             <Star className="w-4 h-4 mr-1" />
             Favorite

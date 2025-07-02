@@ -53,10 +53,12 @@ function createWindow() {
 // Initialize database and set up IPC handlers
 function initializeApplication() {
   try {
-    // Create database instance
     console.log('Initializing database...')
     dbManager = DatabaseManager.getInstance()
     console.log('Database initialized successfully')
+    
+    // Log current database state on startup
+    dbManager.logDbState()
     
     // Window control handlers
     ipcMain.handle('minimizeWindow', () => {
@@ -115,12 +117,26 @@ function initializeApplication() {
     ipcMain.handle('create-organization', async (_, data) => {
       try {
         const id = uuidv4()
-        await dbManager.createOrganization({
+        console.log('Creating organization with data:', { id, ...data })
+        
+        // Perform the operation
+        const result = await dbManager.createOrganization({
           id,
           ...data
         })
-        return { success: true, id }
+        console.log('Database operation result:', result)
+        
+        // Verify organization was actually created
+        const orgAfter = await dbManager.getOrganization(id)
+        console.log('Organization created successfully:', !!orgAfter)
+        
+        if (orgAfter) {
+          return { success: true, id, organization: orgAfter }
+        } else {
+          return { success: false, error: 'Organization creation failed - could not retrieve created organization' }
+        }
       } catch (error) {
+        console.error('Error creating organization:', error)
         return { success: false, error: (error as Error).message }
       }
     })
@@ -138,12 +154,33 @@ function initializeApplication() {
     ipcMain.handle('create-project', async (_, data) => {
       try {
         const id = uuidv4()
-        await dbManager.createProject({
+        console.log('Creating project with data:', { id, ...data })
+        
+        // Log database structure before the operation
+        const orgBefore = await dbManager.getOrganization(data.organization_id)
+        console.log('Parent organization exists:', !!orgBefore)
+        
+        // Perform the operation
+        const result = await dbManager.createProject({
           id,
           ...data
         })
-        return { success: true, id }
+        console.log('Database operation result:', result)
+        
+        // Verify project was actually created
+        const projectAfter = await dbManager.getProject(id)
+        console.log('Project created successfully:', !!projectAfter)
+        
+        // Log the retrieved project data
+        if (projectAfter) {
+          console.log('Project data:', projectAfter)
+          return { success: true, id, project: projectAfter }
+        } else {
+          console.log('WARNING: Project could not be retrieved after creation')
+          return { success: false, error: 'Project creation failed - could not retrieve created project' }
+        }
       } catch (error) {
+        console.error('Error creating project:', error)
         return { success: false, error: (error as Error).message }
       }
     })
@@ -161,12 +198,26 @@ function initializeApplication() {
     ipcMain.handle('create-book', async (_, data) => {
       try {
         const id = uuidv4()
-        await dbManager.createBook({
+        console.log('Creating book with data:', { id, ...data })
+        
+        // Perform the operation
+        const result = await dbManager.createBook({
           id,
           ...data
         })
-        return { success: true, id }
+        console.log('Database operation result:', result)
+        
+        // Verify book was actually created
+        const bookAfter = await dbManager.getBook(id)
+        console.log('Book created successfully:', !!bookAfter)
+        
+        if (bookAfter) {
+          return { success: true, id, book: bookAfter }
+        } else {
+          return { success: false, error: 'Book creation failed - could not retrieve created book' }
+        }
       } catch (error) {
+        console.error('Error creating book:', error)
         return { success: false, error: (error as Error).message }
       }
     })
@@ -184,12 +235,26 @@ function initializeApplication() {
     ipcMain.handle('create-chapter', async (_, data) => {
       try {
         const id = uuidv4()
-        await dbManager.createChapter({
+        console.log('Creating chapter with data:', { id, ...data })
+        
+        // Perform the operation
+        const result = await dbManager.createChapter({
           id,
           ...data
         })
-        return { success: true, id }
+        console.log('Database operation result:', result)
+        
+        // Verify chapter was actually created
+        const chapterAfter = await dbManager.getChapter(id)
+        console.log('Chapter created successfully:', !!chapterAfter)
+        
+        if (chapterAfter) {
+          return { success: true, id, chapter: chapterAfter }
+        } else {
+          return { success: false, error: 'Chapter creation failed - could not retrieve created chapter' }
+        }
       } catch (error) {
+        console.error('Error creating chapter:', error)
         return { success: false, error: (error as Error).message }
       }
     })
@@ -207,12 +272,26 @@ function initializeApplication() {
     ipcMain.handle('create-page', async (_, data) => {
       try {
         const id = uuidv4()
-        await dbManager.createPage({
+        console.log('Creating page with data:', { id, ...data })
+        
+        // Perform the operation
+        const result = await dbManager.createPage({
           id,
           ...data
         })
-        return { success: true, id }
+        console.log('Database operation result:', result)
+        
+        // Verify page was actually created
+        const pageAfter = await dbManager.getPage(id)
+        console.log('Page created successfully:', !!pageAfter)
+        
+        if (pageAfter) {
+          return { success: true, id, page: pageAfter }
+        } else {
+          return { success: false, error: 'Page creation failed - could not retrieve created page' }
+        }
       } catch (error) {
+        console.error('Error creating page:', error)
         return { success: false, error: (error as Error).message }
       }
     })
@@ -258,6 +337,39 @@ function initializeApplication() {
     // Error logging
     ipcMain.on('log-error', (_, error) => {
       console.error('Application Error:', error)
+    })
+    
+    // Add a refresh handler for debugging and to recover from infinite loops
+    ipcMain.handle('refresh-database', async () => {
+      try {
+        console.log('Refreshing database state')
+        dbManager.logDbState()
+        return { success: true }
+      } catch (error) {
+        console.error('Error refreshing database:', error)
+        return { success: false, error: (error as Error).message }
+      }
+    })
+    
+    // Add a handler to log the organization-projects relationship
+    ipcMain.handle('log-organization-projects', async (_, orgId) => {
+      try {
+        console.log(`\n=== Organization-Projects check for ${orgId} ===`)
+        const org = await dbManager.getOrganization(orgId) as any
+        console.log('Organization:', org ? `${org.id} - ${org.name}` : 'Not found')
+        
+        const projects = await dbManager.getProjects(orgId)
+        console.log(`Projects (${projects.length}):`)
+        projects.forEach((project: any, i: number) => {
+          console.log(`${i+1}. ${project.id} - ${project.name} (org: ${project.organization_id})`)
+        })
+        console.log('=== End Organization-Projects check ===\n')
+        
+        return { success: true, org, projects }
+      } catch (error) {
+        console.error('Error logging organization-projects:', error)
+        return { success: false, error: (error as Error).message }
+      }
     })
   } catch (error) {
     console.error('Error initializing application:', error)

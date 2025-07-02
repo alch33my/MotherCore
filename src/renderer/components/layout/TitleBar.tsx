@@ -1,13 +1,28 @@
 import React, { useState } from 'react';
-import { Settings, Minimize, Square, X, Bell, User } from 'lucide-react';
+import { Settings, Minimize, Square, X, Bell, User, RefreshCw } from 'lucide-react';
 
 interface TitleBarProps {
   onSettingsClick?: () => void;
+  onDebugRefresh?: () => void;
   currentUser?: string;
 }
 
-const TitleBar: React.FC<TitleBarProps> = ({ onSettingsClick, currentUser }) => {
+const TitleBar: React.FC<TitleBarProps> = ({ onSettingsClick, onDebugRefresh, currentUser }) => {
   const [isMaximized, setIsMaximized] = useState(false);
+  const [showDebugTools, setShowDebugTools] = useState(false);
+
+  // Show debug tools with Ctrl+Shift+D
+  React.useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.shiftKey && event.key === 'D') {
+        setShowDebugTools(prev => !prev);
+        console.log('Debug tools', showDebugTools ? 'hidden' : 'shown');
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showDebugTools]);
 
   const handleMinimize = () => {
     if (window.electronAPI) {
@@ -58,6 +73,17 @@ const TitleBar: React.FC<TitleBarProps> = ({ onSettingsClick, currentUser }) => 
       {/* Right: Controls */}
       <div className="title-bar-right">
         <div className="title-bar-actions">
+          {/* Debug refresh button - only shown when debug tools are enabled */}
+          {showDebugTools && onDebugRefresh && (
+            <button 
+              className="title-bar-action" 
+              onClick={onDebugRefresh}
+              title="Debug: Force Refresh"
+              style={{ backgroundColor: 'rgba(255, 60, 60, 0.2)' }}
+            >
+              <RefreshCw className="w-4 h-4 text-matrix-error" />
+            </button>
+          )}
           <button 
             className="title-bar-action" 
             onClick={onSettingsClick}

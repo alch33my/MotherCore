@@ -45,6 +45,55 @@ function App() {
   const [activeBookId, setActiveBookId] = useState<string | null>(null)
   const [activeChapterId, setActiveChapterId] = useState<string | null>(null)
   
+  // Debug function to force refresh the entire application state
+  const forceRefresh = async () => {
+    console.log('Force refreshing entire application state')
+    
+    // Clear all selection and active IDs
+    setSelectedItem(null)
+    setSelectedType('')
+    setIsLibraryView(false)
+    setSelectedOrganization(null)
+    setActiveOrgId(null)
+    setActiveProjectId(null)
+    setActiveBookId(null)
+    setActiveChapterId(null)
+    
+    // Close any open modals
+    setShowCreateOrgForm(false)
+    setShowCreateProjectForm(false)
+    setShowCreateBookForm(false)
+    setShowCreateChapterForm(false)
+    setShowCreatePageForm(false)
+    
+    // If we have access to the database, refresh it
+    if (window.electronAPI) {
+      try {
+        // Log database state
+        console.log('Requesting database refresh')
+        
+        // Re-load stats
+        const orgResult = await window.electronAPI.getOrganizations()
+        if (orgResult.success) {
+          const orgCount = orgResult.organizations?.length || 0
+          
+          // Update stats with real data
+          setStats(prev => ({
+            ...prev,
+            organizations: orgCount,
+            // Rough storage estimate
+            storage: `${Math.round(orgCount * 0.2 * 10) / 10} MB`
+          }))
+        }
+      } catch (err) {
+        console.error('Failed to refresh database state:', err)
+        window.electronAPI?.logError(String(err))
+      }
+    }
+    
+    console.log('Application state reset complete')
+  }
+  
   // Status bar data
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString())
   const [wordCount, setWordCount] = useState(0)
@@ -183,13 +232,45 @@ function App() {
   }
   
   const handleSelectItem = (item: any, type: string) => {
+    console.log(`Selecting ${type} with ID ${item.id}`, item);
     setSelectedItem(item);
     setSelectedType(type);
     
-    // If selecting an organization, set the library view
+    // Update active IDs based on the type
     if (type === 'organization') {
+      setActiveOrgId(item.id);
+      // Clear other IDs when selecting organization
+      setActiveProjectId(null);
+      setActiveBookId(null);
+      setActiveChapterId(null);
       setIsLibraryView(true);
       setSelectedOrganization(item);
+    } else if (type === 'project') {
+      setActiveProjectId(item.id);
+      // Use the organization_id from the item
+      if (item.organization_id) {
+        console.log(`Setting active org ID to ${item.organization_id} for project ${item.id}`);
+        setActiveOrgId(item.organization_id);
+      } else {
+        console.error(`Could not find parent organization for project: ${item.id}`);
+      }
+      // Clear child IDs
+      setActiveBookId(null);
+      setActiveChapterId(null);
+    } else if (type === 'book') {
+      setActiveBookId(item.id);
+      // Use the project_id from the item
+      if (item.project_id) {
+        setActiveProjectId(item.project_id);
+      }
+      // Clear child IDs
+      setActiveChapterId(null);
+    } else if (type === 'chapter') {
+      setActiveChapterId(item.id);
+      // Use the book_id from the item
+      if (item.book_id) {
+        setActiveBookId(item.book_id);
+      }
     }
   };
   
@@ -212,13 +293,20 @@ function App() {
     // Close modal first
     setShowCreateOrgForm(false);
     console.log('Organization created successfully');
-    // Refresh data after creation
-    if (window.electronAPI) {
-      window.electronAPI.getOrganizations().then((result) => {
-        if (result.success) {
-          console.log('Organizations reloaded successfully');
-        }
-      });
+    
+    // Reload organizations to refresh the UI
+    if (typeof window !== 'undefined' && window.electronAPI) {
+      // Small delay to ensure database has updated
+      setTimeout(() => {
+        window.electronAPI!.getOrganizations().then((result) => {
+          if (result.success) {
+            console.log('Organizations reloaded successfully');
+            // Force reload the navigation tree by triggering a state change
+            setSelectedType('');
+            setSelectedItem(null);
+          }
+        });
+      }, 300);
     }
   };
 
@@ -226,13 +314,23 @@ function App() {
     // Close modal first
     setShowCreateProjectForm(false);
     console.log('Project created successfully');
-    // Refresh data after creation
-    if (window.electronAPI && activeOrgId) {
-      window.electronAPI.getProjects(activeOrgId).then((result) => {
-        if (result.success) {
-          console.log('Projects reloaded successfully');
-        }
-      });
+    
+    // Reload projects after creation
+    if (typeof window !== 'undefined' && window.electronAPI && activeOrgId) {
+      // Small delay to ensure database has updated
+      setTimeout(() => {
+        window.electronAPI!.getProjects(activeOrgId).then((result) => {
+          if (result.success) {
+            console.log('Projects reloaded successfully');
+            // Force reload the main content by triggering a state change
+            if (selectedItem && selectedType === 'organization' && selectedItem.id === activeOrgId) {
+              const temp = selectedItem;
+              setSelectedItem(null);
+              setTimeout(() => setSelectedItem(temp), 50);
+            }
+          }
+        });
+      }, 300);
     }
   };
 
@@ -240,13 +338,23 @@ function App() {
     // Close modal first
     setShowCreateBookForm(false);
     console.log('Book created successfully');
-    // Refresh data after creation
-    if (window.electronAPI && activeProjectId) {
-      window.electronAPI.getBooks(activeProjectId).then((result) => {
-        if (result.success) {
-          console.log('Books reloaded successfully');
-        }
-      });
+    
+    // Reload books after creation
+    if (typeof window !== 'undefined' && window.electronAPI && activeProjectId) {
+      // Small delay to ensure database has updated
+      setTimeout(() => {
+        window.electronAPI!.getBooks(activeProjectId).then((result) => {
+          if (result.success) {
+            console.log('Books reloaded successfully');
+            // Force reload the main content by triggering a state change
+            if (selectedItem && selectedType === 'project' && selectedItem.id === activeProjectId) {
+              const temp = selectedItem;
+              setSelectedItem(null);
+              setTimeout(() => setSelectedItem(temp), 50);
+            }
+          }
+        });
+      }, 300);
     }
   };
 
@@ -254,13 +362,23 @@ function App() {
     // Close modal first
     setShowCreateChapterForm(false);
     console.log('Chapter created successfully');
-    // Refresh data after creation
-    if (window.electronAPI && activeBookId) {
-      window.electronAPI.getChapters(activeBookId).then((result) => {
-        if (result.success) {
-          console.log('Chapters reloaded successfully');
-        }
-      });
+    
+    // Reload chapters after creation
+    if (typeof window !== 'undefined' && window.electronAPI && activeBookId) {
+      // Small delay to ensure database has updated
+      setTimeout(() => {
+        window.electronAPI!.getChapters(activeBookId).then((result) => {
+          if (result.success) {
+            console.log('Chapters reloaded successfully');
+            // Force reload the main content by triggering a state change
+            if (selectedItem && selectedType === 'book' && selectedItem.id === activeBookId) {
+              const temp = selectedItem;
+              setSelectedItem(null);
+              setTimeout(() => setSelectedItem(temp), 50);
+            }
+          }
+        });
+      }, 300);
     }
   };
 
@@ -268,13 +386,23 @@ function App() {
     // Close modal first
     setShowCreatePageForm(false);
     console.log('Page created successfully');
-    // Refresh data after creation
-    if (window.electronAPI && activeChapterId) {
-      window.electronAPI.getPages(activeChapterId).then((result) => {
-        if (result.success) {
-          console.log('Pages reloaded successfully');
-        }
-      });
+    
+    // Reload pages after creation
+    if (typeof window !== 'undefined' && window.electronAPI && activeChapterId) {
+      // Small delay to ensure database has updated
+      setTimeout(() => {
+        window.electronAPI!.getPages(activeChapterId).then((result) => {
+          if (result.success) {
+            console.log('Pages reloaded successfully');
+            // Force reload the main content by triggering a state change
+            if (selectedItem && selectedType === 'chapter' && selectedItem.id === activeChapterId) {
+              const temp = selectedItem;
+              setSelectedItem(null);
+              setTimeout(() => setSelectedItem(temp), 50);
+            }
+          }
+        });
+      }, 300);
     }
   };
 
@@ -316,17 +444,6 @@ function App() {
             <Sidebar 
               onSelectItem={(item, type) => {
                 handleSelectItem(item, type);
-                
-                // Update active IDs when selecting items
-                if (type === 'organization') {
-                  setActiveOrgId(item.id);
-                } else if (type === 'project') {
-                  setActiveProjectId(item.id);
-                } else if (type === 'book') {
-                  setActiveBookId(item.id);
-                } else if (type === 'chapter') {
-                  setActiveChapterId(item.id);
-                }
               }}
               isLibraryView={isLibraryView}
               selectedOrganization={selectedOrganization}
@@ -344,6 +461,7 @@ function App() {
             {/* Title Bar */}
             <TitleBar 
               onSettingsClick={handleSettingsClick}
+              onDebugRefresh={forceRefresh}
               currentUser="Knowledge Keeper" // Replace with actual user name
             />
             

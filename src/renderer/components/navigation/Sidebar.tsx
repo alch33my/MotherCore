@@ -67,6 +67,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       setLoading(true);
       const result = await window.electronAPI.getOrganizations();
       if (result.success) {
+        console.log(`Sidebar: Loaded ${result.organizations?.length || 0} organizations`);
         setOrganizations(result.organizations || []);
       } else {
         setError(result.error || 'Failed to load organizations');
@@ -122,162 +123,29 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   // Navigation tree handlers
-  const handleSelectOrganization = (orgId: string) => {
-    const org = organizations.find(o => o.id === orgId);
-    if (org) {
-      onSelectItem(org, 'organization');
-    }
+  const handleSelectOrganization = (item: any) => {
+    // We already have the full organization object
+    onSelectItem(item, 'organization');
   };
 
-  const handleSelectProject = (projectId: string) => {
-    // Fetch project details and pass to onSelectItem
-    if (window.electronAPI) {
-      // First, find the parent organization of this project
-      let parentOrgId = null;
-      for (const org of organizations) {
-        if (org.children) {
-          const foundProject = org.children.find((p: any) => p.id === projectId);
-          if (foundProject) {
-            parentOrgId = org.id;
-            break;
-          }
-        }
-      }
-      
-      // Get project with the correct parent organization ID
-      if (parentOrgId) {
-        window.electronAPI.getProjects(parentOrgId).then(result => {
-          if (result.success && result.projects) {
-            const project = result.projects.find((p: any) => p.id === projectId);
-            if (project) {
-              onSelectItem(project, 'project');
-            }
-          }
-        });
-      } else {
-        console.error('Could not find parent organization for project:', projectId);
-      }
-    }
+  const handleSelectProject = (item: any) => {
+    // We now have the full project object with organization_id
+    onSelectItem(item, 'project');
   };
 
-  const handleSelectBook = (bookId: string) => {
-    if (window.electronAPI) {
-      // Need to find the parent project of this book by traversing the tree
-      let parentProjectId = null;
-      for (const org of organizations) {
-        if (org.children) {
-          for (const project of org.children) {
-            if (project.children) {
-              const foundBook = project.children.find((b: any) => b.id === bookId);
-              if (foundBook) {
-                parentProjectId = project.id;
-                break;
-              }
-            }
-          }
-          if (parentProjectId) break;
-        }
-      }
-      
-      // Get book with the correct parent project ID
-      if (parentProjectId) {
-        window.electronAPI.getBooks(parentProjectId).then(result => {
-          if (result.success && result.books) {
-            const book = result.books.find((b: any) => b.id === bookId);
-            if (book) {
-              onSelectItem(book, 'book');
-            }
-          }
-        });
-      } else {
-        console.error('Could not find parent project for book:', bookId);
-      }
-    }
+  const handleSelectBook = (item: any) => {
+    // We now have the full book object with project_id
+    onSelectItem(item, 'book');
   };
 
-  const handleSelectChapter = (chapterId: string) => {
-    if (window.electronAPI) {
-      // Need to find the parent book of this chapter by traversing the tree
-      let parentBookId = null;
-      for (const org of organizations) {
-        if (org.children) {
-          for (const project of org.children) {
-            if (project.children) {
-              for (const book of project.children) {
-                if (book.children) {
-                  const foundChapter = book.children.find((c: any) => c.id === chapterId);
-                  if (foundChapter) {
-                    parentBookId = book.id;
-                    break;
-                  }
-                }
-              }
-              if (parentBookId) break;
-            }
-          }
-          if (parentBookId) break;
-        }
-      }
-      
-      // Get chapter with the correct parent book ID
-      if (parentBookId) {
-        window.electronAPI.getChapters(parentBookId).then(result => {
-          if (result.success && result.chapters) {
-            const chapter = result.chapters.find((c: any) => c.id === chapterId);
-            if (chapter) {
-              onSelectItem(chapter, 'chapter');
-            }
-          }
-        });
-      } else {
-        console.error('Could not find parent book for chapter:', chapterId);
-      }
-    }
+  const handleSelectChapter = (item: any) => {
+    // We now have the full chapter object with book_id
+    onSelectItem(item, 'chapter');
   };
 
-  const handleSelectPage = (pageId: string) => {
-    if (window.electronAPI) {
-      // Need to find the parent chapter of this page by traversing the tree
-      let parentChapterId = null;
-      for (const org of organizations) {
-        if (org.children) {
-          for (const project of org.children) {
-            if (project.children) {
-              for (const book of project.children) {
-                if (book.children) {
-                  for (const chapter of book.children) {
-                    if (chapter.children) {
-                      const foundPage = chapter.children.find((p: any) => p.id === pageId);
-                      if (foundPage) {
-                        parentChapterId = chapter.id;
-                        break;
-                      }
-                    }
-                  }
-                  if (parentChapterId) break;
-                }
-              }
-              if (parentChapterId) break;
-            }
-          }
-          if (parentChapterId) break;
-        }
-      }
-      
-      // Get page with the correct parent chapter ID
-      if (parentChapterId) {
-        window.electronAPI.getPages(parentChapterId).then(result => {
-          if (result.success && result.pages) {
-            const page = result.pages.find((p: any) => p.id === pageId);
-            if (page) {
-              onSelectItem(page, 'page');
-            }
-          }
-        });
-      } else {
-        console.error('Could not find parent chapter for page:', pageId);
-      }
-    }
+  const handleSelectPage = (item: any) => {
+    // We now have the full page object with chapter_id
+    onSelectItem(item, 'page');
   };
 
   const handleAddOrganization = () => {
