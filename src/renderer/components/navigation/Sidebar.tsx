@@ -21,13 +21,23 @@ interface SidebarProps {
   onBackToLibrary?: () => void;
   selectedOrganization?: any;
   isLibraryView?: boolean;
+  onCreateOrganization?: () => void;
+  onCreateProject?: () => void;
+  onCreateBook?: () => void;
+  onCreateChapter?: () => void;
+  onCreatePage?: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
   onSelectItem, 
   onBackToLibrary,
   selectedOrganization,
-  isLibraryView = false
+  isLibraryView = false,
+  onCreateOrganization,
+  onCreateProject,
+  onCreateBook,
+  onCreateChapter,
+  onCreatePage
 }) => {
   const [organizations, setOrganizations] = useState<any[]>([]);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
@@ -122,78 +132,192 @@ const Sidebar: React.FC<SidebarProps> = ({
   const handleSelectProject = (projectId: string) => {
     // Fetch project details and pass to onSelectItem
     if (window.electronAPI) {
-      window.electronAPI.getProjects().then(result => {
-        if (result.success && result.projects) {
-          const project = result.projects.find((p: any) => p.id === projectId);
-          if (project) {
-            onSelectItem(project, 'project');
+      // First, find the parent organization of this project
+      let parentOrgId = null;
+      for (const org of organizations) {
+        if (org.children) {
+          const foundProject = org.children.find((p: any) => p.id === projectId);
+          if (foundProject) {
+            parentOrgId = org.id;
+            break;
           }
         }
-      });
+      }
+      
+      // Get project with the correct parent organization ID
+      if (parentOrgId) {
+        window.electronAPI.getProjects(parentOrgId).then(result => {
+          if (result.success && result.projects) {
+            const project = result.projects.find((p: any) => p.id === projectId);
+            if (project) {
+              onSelectItem(project, 'project');
+            }
+          }
+        });
+      } else {
+        console.error('Could not find parent organization for project:', projectId);
+      }
     }
   };
 
   const handleSelectBook = (bookId: string) => {
     if (window.electronAPI) {
-      window.electronAPI.getBooks().then(result => {
-        if (result.success && result.books) {
-          const book = result.books.find((b: any) => b.id === bookId);
-          if (book) {
-            onSelectItem(book, 'book');
+      // Need to find the parent project of this book by traversing the tree
+      let parentProjectId = null;
+      for (const org of organizations) {
+        if (org.children) {
+          for (const project of org.children) {
+            if (project.children) {
+              const foundBook = project.children.find((b: any) => b.id === bookId);
+              if (foundBook) {
+                parentProjectId = project.id;
+                break;
+              }
+            }
           }
+          if (parentProjectId) break;
         }
-      });
+      }
+      
+      // Get book with the correct parent project ID
+      if (parentProjectId) {
+        window.electronAPI.getBooks(parentProjectId).then(result => {
+          if (result.success && result.books) {
+            const book = result.books.find((b: any) => b.id === bookId);
+            if (book) {
+              onSelectItem(book, 'book');
+            }
+          }
+        });
+      } else {
+        console.error('Could not find parent project for book:', bookId);
+      }
     }
   };
 
   const handleSelectChapter = (chapterId: string) => {
     if (window.electronAPI) {
-      window.electronAPI.getChapters().then(result => {
-        if (result.success && result.chapters) {
-          const chapter = result.chapters.find((c: any) => c.id === chapterId);
-          if (chapter) {
-            onSelectItem(chapter, 'chapter');
+      // Need to find the parent book of this chapter by traversing the tree
+      let parentBookId = null;
+      for (const org of organizations) {
+        if (org.children) {
+          for (const project of org.children) {
+            if (project.children) {
+              for (const book of project.children) {
+                if (book.children) {
+                  const foundChapter = book.children.find((c: any) => c.id === chapterId);
+                  if (foundChapter) {
+                    parentBookId = book.id;
+                    break;
+                  }
+                }
+              }
+              if (parentBookId) break;
+            }
           }
+          if (parentBookId) break;
         }
-      });
+      }
+      
+      // Get chapter with the correct parent book ID
+      if (parentBookId) {
+        window.electronAPI.getChapters(parentBookId).then(result => {
+          if (result.success && result.chapters) {
+            const chapter = result.chapters.find((c: any) => c.id === chapterId);
+            if (chapter) {
+              onSelectItem(chapter, 'chapter');
+            }
+          }
+        });
+      } else {
+        console.error('Could not find parent book for chapter:', chapterId);
+      }
     }
   };
 
   const handleSelectPage = (pageId: string) => {
     if (window.electronAPI) {
-      window.electronAPI.getPages().then(result => {
-        if (result.success && result.pages) {
-          const page = result.pages.find((p: any) => p.id === pageId);
-          if (page) {
-            onSelectItem(page, 'page');
+      // Need to find the parent chapter of this page by traversing the tree
+      let parentChapterId = null;
+      for (const org of organizations) {
+        if (org.children) {
+          for (const project of org.children) {
+            if (project.children) {
+              for (const book of project.children) {
+                if (book.children) {
+                  for (const chapter of book.children) {
+                    if (chapter.children) {
+                      const foundPage = chapter.children.find((p: any) => p.id === pageId);
+                      if (foundPage) {
+                        parentChapterId = chapter.id;
+                        break;
+                      }
+                    }
+                  }
+                  if (parentChapterId) break;
+                }
+              }
+              if (parentChapterId) break;
+            }
           }
+          if (parentChapterId) break;
         }
-      });
+      }
+      
+      // Get page with the correct parent chapter ID
+      if (parentChapterId) {
+        window.electronAPI.getPages(parentChapterId).then(result => {
+          if (result.success && result.pages) {
+            const page = result.pages.find((p: any) => p.id === pageId);
+            if (page) {
+              onSelectItem(page, 'page');
+            }
+          }
+        });
+      } else {
+        console.error('Could not find parent chapter for page:', pageId);
+      }
     }
   };
 
   const handleAddOrganization = () => {
-    setShowCreateForm(true);
+    if (onCreateOrganization) {
+      onCreateOrganization();
+    } else {
+      setShowCreateForm(true); // Fallback to old form
+    }
   };
 
   const handleAddProject = (orgId: string) => {
-    const org = organizations.find(o => o.id === orgId);
-    if (org) {
-      onSelectItem(org, 'organization');
-      // You can add logic to show project creation modal here
+    if (onCreateProject) {
+      // Pass the organization ID to the parent component
+      onSelectItem({ id: orgId }, 'organization'); // First select the organization
+      onCreateProject(); // Then open the project creation modal
     }
   };
 
   const handleAddBook = (projectId: string) => {
-    // Logic to show book creation modal
+    if (onCreateBook) {
+      // Pass the project ID to the parent component
+      onSelectItem({ id: projectId }, 'project'); // First select the project
+      onCreateBook(); // Then open the book creation modal
+    }
   };
 
   const handleAddChapter = (bookId: string) => {
-    // Logic to show chapter creation modal
+    if (onCreateChapter) {
+      // Pass the book ID to the parent component
+      onSelectItem({ id: bookId }, 'book'); // First select the book
+      onCreateChapter(); // Then open the chapter creation modal
+    }
   };
 
   const handleAddPage = (chapterId: string) => {
-    // Logic to show page creation modal
+    if (onCreatePage) {
+      // Pass the chapter ID to the parent component
+      onSelectItem({ id: chapterId }, 'chapter'); // First select the chapter
+      onCreatePage(); // Then open the page creation modal
+    }
   };
 
   // Render the Library Sidebar when in library view
@@ -265,11 +389,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   // Default Sidebar View (Home View)
   return (
     <>
-      {/* Sidebar Header */}
+      {/* Sidebar Header - REMOVED DUPLICATE MOTHERCORE */}
       <div className="sidebar-header">
-        <h1 className="text-xl font-bold text-matrix-gold mb-2">MOTHERCORE</h1>
-        <p className="text-sm text-matrix-amber mb-4">Your Knowledge Repository</p>
-        
         {/* Search */}
         <div className="relative">
           <Search className="w-4 h-4 absolute left-3 top-3 text-matrix-gold/50" />

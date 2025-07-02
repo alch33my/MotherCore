@@ -80,6 +80,7 @@ function NavigationTree({
       }
       
       setLoading(prev => ({ ...prev, [orgId]: true }))
+      // Pass the organization ID directly as expected by the API
       const result = await window.electronAPI.getProjects(orgId)
       if (result.success && result.projects) {
         setOrganizations(prevOrgs => {

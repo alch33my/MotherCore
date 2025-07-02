@@ -14,11 +14,21 @@ import {
   Info
 } from 'lucide-react';
 
-interface SettingsPageProps {
-  onClose: () => void;
+interface MatrixSettings {
+  intensity: number;
+  speed: number;
+  colorScheme: 'gold' | 'green' | 'blue' | 'purple' | 'gradient';
+  density: number;
+  enabled: boolean;
 }
 
-const SettingsPage: React.FC<SettingsPageProps> = ({ onClose }) => {
+interface SettingsPageProps {
+  onClose: () => void;
+  matrixSettings: MatrixSettings;
+  onMatrixSettingsChange: (settings: MatrixSettings) => void;
+}
+
+const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, matrixSettings, onMatrixSettingsChange }) => {
   const [activeTab, setActiveTab] = useState('appearance');
   const [settings, setSettings] = useState({
     theme: 'cyberpunk',
@@ -76,43 +86,85 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose }) => {
             <h3 className="settings-section-title">Appearance & Effects</h3>
             <div className="settings-grid">
               <div className="setting-item">
-                <label className="setting-label">Theme</label>
+                <label className="setting-label">Matrix Rain Enabled</label>
+                <label className="setting-toggle">
+                  <input
+                    type="checkbox"
+                    checked={matrixSettings.enabled}
+                    onChange={(e) => onMatrixSettingsChange({
+                      ...matrixSettings,
+                      enabled: e.target.checked
+                    })}
+                  />
+                  <span className="toggle-slider"></span>
+                </label>
+              </div>
+
+              <div className="setting-item">
+                <label className="setting-label">Color Scheme</label>
                 <select 
                   className="setting-select"
-                  value={settings.theme}
-                  onChange={(e) => updateSetting('theme', e.target.value)}
+                  value={matrixSettings.colorScheme}
+                  onChange={(e) => onMatrixSettingsChange({
+                    ...matrixSettings,
+                    colorScheme: e.target.value as MatrixSettings['colorScheme']
+                  })}
                 >
-                  <option value="cyberpunk">Cyberpunk (Gold)</option>
-                  <option value="matrix">Matrix (Green)</option>
-                  <option value="neon">Neon (Purple)</option>
-                  <option value="minimal">Minimal Dark</option>
+                  <option value="gold">Cyberpunk Gold</option>
+                  <option value="green">Matrix Green</option>
+                  <option value="blue">Cyber Blue</option>
+                  <option value="purple">Neon Purple</option>
+                  <option value="gradient">Rainbow Gradient</option>
                 </select>
               </div>
               
               <div className="setting-item">
                 <label className="setting-label">
-                  Matrix Rain Speed: {settings.matrixSpeed}%
+                  Matrix Rain Intensity: {matrixSettings.intensity}%
                 </label>
                 <input
                   type="range"
                   min="0"
                   max="100"
-                  value={settings.matrixSpeed}
-                  onChange={(e) => updateSetting('matrixSpeed', parseInt(e.target.value))}
+                  value={matrixSettings.intensity}
+                  onChange={(e) => onMatrixSettingsChange({
+                    ...matrixSettings,
+                    intensity: parseInt(e.target.value)
+                  })}
                   className="setting-slider"
                 />
               </div>
 
               <div className="setting-item">
                 <label className="setting-label">
-                  Matrix Rain Density: {settings.matrixDensity}%
+                  Matrix Rain Speed: {matrixSettings.speed}%
                 </label>
                 <input
                   type="range"
                   min="0"
                   max="100"
-                  value={settings.matrixDensity}
-                  onChange={(e) => updateSetting('matrixDensity', parseInt(e.target.value))}
+                  value={matrixSettings.speed}
+                  onChange={(e) => onMatrixSettingsChange({
+                    ...matrixSettings,
+                    speed: parseInt(e.target.value)
+                  })}
+                  className="setting-slider"
+                />
+              </div>
+
+              <div className="setting-item">
+                <label className="setting-label">
+                  Matrix Rain Density: {Math.round(matrixSettings.density * 100)}%
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={matrixSettings.density * 100}
+                  onChange={(e) => onMatrixSettingsChange({
+                    ...matrixSettings,
+                    density: parseInt(e.target.value) / 100
+                  })}
                   className="setting-slider"
                 />
               </div>

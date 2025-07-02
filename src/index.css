@@ -92,19 +92,29 @@ input, textarea {
 
 .sidebar {
   width: 320px;
-  background: rgba(0, 0, 0, 0.9);
-  border-right: 1px solid rgba(255, 215, 0, 0.3);
-  backdrop-filter: blur(10px);
+  height: 75vh; /* 75% of viewport height for floating effect */
+  margin-top: 12vh; /* Top padding for floating effect */
+  margin-bottom: 13vh; /* Bottom padding for floating effect */
+  background: rgba(0, 0, 0, 0.95); /* Slightly more opaque for distinction */
+  border: 1px solid rgba(255, 215, 0, 0.3); /* Full border instead of just right */
+  border-radius: 0 12px 12px 0; /* Rounded right corners for floating effect */
+  backdrop-filter: blur(15px); /* Increased blur for floating effect */
   display: flex;
   flex-direction: column;
-  height: 100%;
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.4); /* Shadow for depth */
+  position: relative;
+  z-index: 10;
 }
 
 .main-content {
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: calc(100vh - 48px); /* Account for fixed title bar */
+  margin-top: 48px; /* Account for fixed title bar */
+  background: transparent; /* Transparent for matrix rain visibility */
+  position: relative;
+  z-index: 1;
   overflow: hidden;
 }
 
@@ -149,11 +159,16 @@ input, textarea {
   flex: 1;
   overflow: hidden;
   position: relative;
+  background: transparent; /* Make transparent for matrix rain */
+  padding: 20px;
+  margin-left: 20px; /* Space from sidebar */
+  margin-bottom: 20px; /* Reduce bottom spacing */
 }
 
 .sidebar-header {
-  padding: 20px;
+  padding: 16px; /* Reduced from 20px since no branding */
   border-bottom: 1px solid rgba(255, 215, 0, 0.3);
+  background: rgba(0, 0, 0, 0.1); /* Subtle distinction */
 }
 
 .sidebar-content {
@@ -238,6 +253,17 @@ input, textarea {
   padding-left: 8px;
 }
 
+/* Content panels with proper transparency */
+.content-panel {
+  background: rgba(0, 0, 0, 0.7); /* Semi-transparent panels */
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
 /* Form styles */
 .form-container {
   background: rgba(255, 215, 0, 0.1);
@@ -316,6 +342,12 @@ input, textarea {
   height: 100%;
   text-align: center;
   padding: 40px;
+  background: rgba(0, 0, 0, 0.6); /* Semi-transparent for matrix rain */
+  backdrop-filter: blur(15px); /* Add blur for readability */
+  border-radius: 12px; /* Add subtle rounding */
+  margin: 20px; /* Add margin for floating effect */
+  border: 1px solid rgba(255, 215, 0, 0.2); /* Subtle border */
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); /* Add depth */
 }
 
 .welcome-content {
@@ -349,14 +381,15 @@ input, textarea {
 }
 
 .detail-view {
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.7); /* Semi-transparent */
   border-radius: 12px;
   border: 1px solid rgba(255, 215, 0, 0.3);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(15px);
   padding: 32px;
-  margin: 24px;
-  height: calc(100% - 48px);
+  margin: 0; /* Remove margin for better spacing */
+  height: auto; /* Let content determine height */
   overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 .detail-header {
@@ -482,6 +515,29 @@ input, textarea {
   border-radius: 6px;
   margin-bottom: 16px;
   font-size: 14px;
+}
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal-container {
+  animation: fadeIn 0.3s ease-out;
+  max-width: 90%;
+  max-height: 90%;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
 }
 
 /* Animations */

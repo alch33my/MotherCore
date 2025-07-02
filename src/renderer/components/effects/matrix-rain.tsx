@@ -7,15 +7,17 @@ interface MatrixRainProps {
   speed?: number
   fontSize?: number
   characterSet?: 'binary' | 'katakana' | 'mixed'
-  colorScheme?: 'green' | 'gold' | 'gradient'
+  colorScheme?: 'green' | 'gold' | 'blue' | 'purple' | 'gradient'
+  intensity?: number // 0-100 for overall visibility
 }
 
 function MatrixRain({ 
-  density = 0.5,
+  density = 0.8, // Increased default density
   speed = 50,
   fontSize = 16,
   characterSet = 'mixed',
-  colorScheme = 'gold'
+  colorScheme = 'gold',
+  intensity = 70 // Increased default intensity
 }: MatrixRainProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -58,40 +60,53 @@ function MatrixRain({
       }
     }
 
-    // Get color based on position and scheme
+    // Get color based on position and scheme with enhanced visibility
     function getColor(position: number): string {
+      const baseIntensity = 40 + (intensity / 100) * 60; // 40-100% range
+      const brightness = baseIntensity + Math.random() * 30;
+      
       switch (colorScheme) {
         case 'green':
-          return '#00ff41'
+          return `hsl(120, 100%, ${brightness}%)`
         case 'gold':
-          return '#ffd700'
+          return `hsl(45, 100%, ${brightness}%)`
+        case 'blue':
+          return `hsl(220, 100%, ${brightness}%)`
+        case 'purple':
+          return `hsl(300, 100%, ${brightness}%)`
         case 'gradient':
-          // Gradient from gold to green
-          const r = Math.floor(255 - (position * 255))
-          const g = 215 + Math.floor(position * 40)
-          const b = Math.floor(65 * position)
-          return `rgb(${r}, ${g}, ${b})`
+          // Enhanced gradient from gold to green
+          const hue = 45 + (position * 75); // 45 (gold) to 120 (green)
+          return `hsl(${hue}, 100%, ${brightness}%)`
         default:
-          return '#ffd700' // Default to gold
+          return `hsl(45, 100%, ${brightness}%)` // Default to gold
       }
     }
 
     function drawMatrix() {
-      // Semi-transparent black to create trails
-      ctx!.fillStyle = 'rgba(10, 10, 10, 0.05)'
+      // Enhanced trail effect with intensity consideration
+      const fadeAmount = 0.02 + (intensity / 100) * 0.03; // 0.02-0.05 range
+      ctx!.fillStyle = `rgba(10, 10, 10, ${fadeAmount})`
       ctx!.fillRect(0, 0, canvas!.width, canvas!.height)
 
       for (let i = 0; i < rainDrops.length; i++) {
         const drop = rainDrops[i]
         const text = characters.charAt(Math.floor(Math.random() * characters.length))
 
-        // Set color and opacity
+        // Set color and opacity with glow effect
         ctx!.fillStyle = drop.color
-        ctx!.font = `${fontSize}px monospace`
+        ctx!.font = `${fontSize}px 'Fira Code', monospace`
         ctx!.globalAlpha = drop.opacity
+        
+        // Add glow effect for enhanced visibility
+        ctx!.shadowColor = drop.color
+        ctx!.shadowBlur = 3
         
         // Draw the character
         ctx!.fillText(text, i * fontSize, drop.position * fontSize)
+        
+        // Reset shadow
+        ctx!.shadowBlur = 0
         
         // Reset drop when it reaches bottom or randomly based on density
         if (drop.position * fontSize > canvas!.height && Math.random() > density) {
@@ -139,7 +154,7 @@ function MatrixRain({
       window.removeEventListener('resize', handleResize)
       window.removeEventListener('resize', resizeCanvas)
     }
-  }, [density, speed, fontSize, characterSet, colorScheme])
+  }, [density, speed, fontSize, characterSet, colorScheme, intensity])
 
   return (
     <canvas 
@@ -153,7 +168,7 @@ function MatrixRain({
         height: '100%',
         pointerEvents: 'none',
         zIndex: 0,
-        opacity: 0.4
+        opacity: intensity / 100 // Make opacity configurable based on intensity
       }}
     />
   )

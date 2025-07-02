@@ -9,6 +9,12 @@ import TitleBar from './renderer/components/layout/TitleBar'
 import BottomBar from './renderer/components/layout/BottomBar'
 import SettingsPage from './renderer/components/settings/SettingsPage'
 import AuthScreen from './renderer/components/auth/AuthScreen' // Import AuthScreen
+// Import form components
+import CreateOrganizationForm from './renderer/components/organizations/create-organization-form'
+import CreateProjectForm from './renderer/components/projects/create-project-form'
+import CreateBookForm from './renderer/components/books/create-book-form'
+import CreateChapterForm from './renderer/components/chapters/create-chapter-form'
+import CreatePageForm from './renderer/components/content/create-page-form'
 
 
 // Update the type definition at the top of the file
@@ -44,6 +50,23 @@ function App() {
   const [wordCount, setWordCount] = useState(0)
   const [charCount, setCharCount] = useState(0)
   
+  // ADD: Matrix rain settings state
+  const [matrixSettings, setMatrixSettings] = useState({
+    intensity: 70,
+    speed: 50,
+    colorScheme: 'gold' as 'gold' | 'green' | 'blue' | 'purple' | 'gradient',
+    density: 0.8,
+    enabled: true
+  })
+  
+  // Stats for BottomBar
+  const [stats, setStats] = useState({
+    organizations: 0,
+    projects: 0,
+    notes: 0,
+    storage: '0 KB'
+  });
+
   // Update time every second
   useEffect(() => {
     const timer = setInterval(() => {
@@ -52,6 +75,45 @@ function App() {
     
     return () => clearInterval(timer);
   }, []);
+  
+  // Load real stats
+  useEffect(() => {
+    if (isAuthenticated && typeof window !== 'undefined' && window.electronAPI) {
+      // Get organization count
+      window.electronAPI.getOrganizations().then(result => {
+        if (result.success) {
+          const orgCount = result.organizations?.length || 0;
+          
+          // Get projects count (sum of all projects across orgs)
+          let projectPromises = [];
+          let projectCount = 0;
+          if (result.organizations) {
+            for (const org of result.organizations) {
+              projectPromises.push(
+                window.electronAPI!.getProjects(org.id).then(projectResult => {
+                  if (projectResult.success) {
+                    projectCount += projectResult.projects?.length || 0;
+                  }
+                })
+              );
+            }
+          }
+
+          // Calculate total notes/pages
+          Promise.all(projectPromises).then(() => {
+            // Update stats with real data
+            setStats(prev => ({
+              ...prev,
+              organizations: orgCount,
+              projects: projectCount,
+              // Rough storage estimate
+              storage: `${Math.round((orgCount + projectCount) * 0.2 * 10) / 10} MB`
+            }));
+          });
+        }
+      });
+    }
+  }, [isAuthenticated]);
   
   // Check if electronAPI is available
   useEffect(() => {
@@ -145,6 +207,77 @@ function App() {
     setShowSettings(true);
   };
 
+  // ADD: Modal handlers for creation forms
+  const handleCreateOrganization = () => {
+    // Close modal first
+    setShowCreateOrgForm(false);
+    console.log('Organization created successfully');
+    // Refresh data after creation
+    if (window.electronAPI) {
+      window.electronAPI.getOrganizations().then((result) => {
+        if (result.success) {
+          console.log('Organizations reloaded successfully');
+        }
+      });
+    }
+  };
+
+  const handleCreateProject = () => {
+    // Close modal first
+    setShowCreateProjectForm(false);
+    console.log('Project created successfully');
+    // Refresh data after creation
+    if (window.electronAPI && activeOrgId) {
+      window.electronAPI.getProjects(activeOrgId).then((result) => {
+        if (result.success) {
+          console.log('Projects reloaded successfully');
+        }
+      });
+    }
+  };
+
+  const handleCreateBook = () => {
+    // Close modal first
+    setShowCreateBookForm(false);
+    console.log('Book created successfully');
+    // Refresh data after creation
+    if (window.electronAPI && activeProjectId) {
+      window.electronAPI.getBooks(activeProjectId).then((result) => {
+        if (result.success) {
+          console.log('Books reloaded successfully');
+        }
+      });
+    }
+  };
+
+  const handleCreateChapter = () => {
+    // Close modal first
+    setShowCreateChapterForm(false);
+    console.log('Chapter created successfully');
+    // Refresh data after creation
+    if (window.electronAPI && activeBookId) {
+      window.electronAPI.getChapters(activeBookId).then((result) => {
+        if (result.success) {
+          console.log('Chapters reloaded successfully');
+        }
+      });
+    }
+  };
+
+  const handleCreatePage = () => {
+    // Close modal first
+    setShowCreatePageForm(false);
+    console.log('Page created successfully');
+    // Refresh data after creation
+    if (window.electronAPI && activeChapterId) {
+      window.electronAPI.getPages(activeChapterId).then((result) => {
+        if (result.success) {
+          console.log('Pages reloaded successfully');
+        }
+      });
+    }
+  };
+
   function renderPreloadErrorScreen() {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-matrix-black">
@@ -162,19 +295,18 @@ function App() {
   }
 
   function renderMainApplication() {
-    // Stats for BottomBar
-    const stats = {
-      organizations: 0, // Replace with actual count
-      projects: 0,
-      notes: 0,
-      storage: '0 KB'
-    };
-    
     return (
       <div className="app-container">
         {/* Matrix Rain Effect in background */}
         <div className="matrix-background">
-          <MatrixRain colorScheme="gold" />
+          {matrixSettings.enabled && (
+            <MatrixRain 
+              colorScheme={matrixSettings.colorScheme}
+              intensity={matrixSettings.intensity}
+              speed={matrixSettings.speed}
+              density={matrixSettings.density}
+            />
+          )}
         </div>
         
         {/* Main App Content */}
@@ -182,10 +314,28 @@ function App() {
           {/* Sidebar */}
           <div className="sidebar">
             <Sidebar 
-              onSelectItem={handleSelectItem}
+              onSelectItem={(item, type) => {
+                handleSelectItem(item, type);
+                
+                // Update active IDs when selecting items
+                if (type === 'organization') {
+                  setActiveOrgId(item.id);
+                } else if (type === 'project') {
+                  setActiveProjectId(item.id);
+                } else if (type === 'book') {
+                  setActiveBookId(item.id);
+                } else if (type === 'chapter') {
+                  setActiveChapterId(item.id);
+                }
+              }}
               isLibraryView={isLibraryView}
               selectedOrganization={selectedOrganization}
               onBackToLibrary={handleBackToLibrary}
+              onCreateOrganization={() => setShowCreateOrgForm(true)}
+              onCreateProject={() => setShowCreateProjectForm(true)}
+              onCreateBook={() => setShowCreateBookForm(true)}
+              onCreateChapter={() => setShowCreateChapterForm(true)}
+              onCreatePage={() => setShowCreatePageForm(true)}
             />
           </div>
           
@@ -202,6 +352,22 @@ function App() {
               <MainContent 
                 selectedItem={selectedItem}
                 selectedType={selectedType}
+                onAddProject={(orgId) => {
+                  setActiveOrgId(orgId);
+                  setShowCreateProjectForm(true);
+                }}
+                onAddBook={(projectId) => {
+                  setActiveProjectId(projectId);
+                  setShowCreateBookForm(true);
+                }}
+                onAddChapter={(bookId) => {
+                  setActiveBookId(bookId);
+                  setShowCreateChapterForm(true);
+                }}
+                onAddPage={(chapterId) => {
+                  setActiveChapterId(chapterId);
+                  setShowCreatePageForm(true);
+                }}
               />
             </div>
             
@@ -212,10 +378,72 @@ function App() {
         
         {/* Settings Overlay */}
         {showSettings && (
-          <SettingsPage onClose={() => setShowSettings(false)} />
+          <SettingsPage 
+            onClose={() => setShowSettings(false)}
+            matrixSettings={matrixSettings}
+            onMatrixSettingsChange={setMatrixSettings}
+          />
         )}
         
+        {/* Modal Forms */}
+        {showCreateOrgForm && (
+          <div className="modal-overlay">
+            <div className="modal-container">
+              <CreateOrganizationForm 
+                onClose={() => setShowCreateOrgForm(false)}
+                onSuccess={handleCreateOrganization}
+              />
+            </div>
+          </div>
+        )}
         
+        {showCreateProjectForm && (
+          <div className="modal-overlay">
+            <div className="modal-container">
+              <CreateProjectForm 
+                onClose={() => setShowCreateProjectForm(false)}
+                onSuccess={handleCreateProject}
+                organizationId={activeOrgId || ''}
+              />
+            </div>
+          </div>
+        )}
+        
+        {showCreateBookForm && (
+          <div className="modal-overlay">
+            <div className="modal-container">
+              <CreateBookForm 
+                onClose={() => setShowCreateBookForm(false)}
+                onSuccess={handleCreateBook}
+                projectId={activeProjectId || ''}
+              />
+            </div>
+          </div>
+        )}
+        
+        {showCreateChapterForm && (
+          <div className="modal-overlay">
+            <div className="modal-container">
+              <CreateChapterForm 
+                onClose={() => setShowCreateChapterForm(false)}
+                onSuccess={handleCreateChapter}
+                bookId={activeBookId || ''}
+              />
+            </div>
+          </div>
+        )}
+        
+        {showCreatePageForm && (
+          <div className="modal-overlay">
+            <div className="modal-container">
+              <CreatePageForm 
+                onClose={() => setShowCreatePageForm(false)}
+                onSuccess={handleCreatePage}
+                chapterId={activeChapterId || ''}
+              />
+            </div>
+          </div>
+        )}
       </div>
     )
   }

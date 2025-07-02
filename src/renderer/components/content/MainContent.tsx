@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Calendar, User, Hash, Book, Folder, Star, Tag, Clock, Plus, Download, Trash } from 'lucide-react';
+import PageEditor from './page-editor';
 
 interface MainContentProps {
   selectedItem: any;
   selectedType: string;
+  onAddProject?: (projectId: string) => void;
+  onAddBook?: (bookId: string) => void;
+  onAddChapter?: (chapterId: string) => void;
+  onAddPage?: (pageId: string) => void;
 }
 
-function MainContent({ selectedItem, selectedType }: MainContentProps) {
+function MainContent({ selectedItem, selectedType, onAddProject, onAddBook, onAddChapter, onAddPage }: MainContentProps) {
   const [content, setContent] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -212,7 +217,20 @@ function MainContent({ selectedItem, selectedType }: MainContentProps) {
             Actions
           </h3>
           <div className="action-buttons">
-            <button className="action-btn">
+            <button 
+              className="action-btn"
+              onClick={() => {
+                if (selectedType === 'organization' && typeof onAddProject === 'function') {
+                  onAddProject(selectedItem.id);
+                } else if (selectedType === 'project' && typeof onAddBook === 'function') {
+                  onAddBook(selectedItem.id);
+                } else if (selectedType === 'book' && typeof onAddChapter === 'function') {
+                  onAddChapter(selectedItem.id);
+                } else if (selectedType === 'chapter' && typeof onAddPage === 'function') {
+                  onAddPage(selectedItem.id);
+                }
+              }}
+            >
               <Folder className="w-4 h-4 mr-2" />
               Add {selectedType === 'organization' ? 'Project' : 
                    selectedType === 'project' ? 'Book' : 
@@ -244,6 +262,26 @@ function MainContent({ selectedItem, selectedType }: MainContentProps) {
         
         {/* Display appropriate content based on type */}
         <div className="content-preview">
+          {/* Page Editor Integration */}
+          {selectedType === 'page' && selectedItem && (
+            <div className="page-editor-container">
+              <PageEditor 
+                pageId={selectedItem.id}
+                initialContent={content?.content || ''}
+                onStatsChange={(stats) => {
+                  console.log('Page stats:', stats);
+                  // Forward stats to parent component if needed
+                  // Note: updatePageStats may not be implemented yet in the API
+                  if (typeof window !== 'undefined' && window.electronAPI) {
+                    // Just log the stats for now since updatePageStats isn't implemented
+                    console.log('Would update page stats:', selectedItem.id, stats.words, stats.characters);
+                  }
+                }}
+              />
+            </div>
+          )}
+          
+          {/* CSS classes for content display will be added in premium-ui.css */}
           {/* Organization - show projects */}
           {selectedType === 'organization' && content?.projects && (
             <>

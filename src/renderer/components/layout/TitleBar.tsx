@@ -35,17 +35,21 @@ const TitleBar: React.FC<TitleBarProps> = ({ onSettingsClick, currentUser }) => 
         <div className="app-logo">
           <div className="logo-icon">⚡</div>
           <span className="logo-text">MOTHERCORE</span>
+          <div className="logo-version">v1.0.0</div>
         </div>
       </div>
 
-      {/* Center: Draggable Area with Breadcrumbs */}
+      {/* Center: Draggable Area with Enhanced Breadcrumbs */}
       <div className="title-bar-center draggable-area">
-        <div className="breadcrumb">
-          <span className="breadcrumb-item">Knowledge Repository</span>
+        <div className="breadcrumb-enhanced">
+          <span className="breadcrumb-primary">Knowledge Repository</span>
           {currentUser && (
             <>
               <span className="breadcrumb-separator">•</span>
-              <span className="breadcrumb-item">{currentUser}</span>
+              <span className="breadcrumb-user">
+                <User className="w-3 h-3 inline mr-1" />
+                {currentUser}
+              </span>
             </>
           )}
         </div>
