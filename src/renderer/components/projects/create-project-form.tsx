@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React from 'react'
+import { useState } from 'react'
 import { SaveIcon, XIcon } from 'lucide-react'
 
 interface CreateProjectFormProps {
@@ -149,3 +150,4 @@ function CreateProjectForm({ organizationId, onClose, onSuccess }: CreateProject
 }
 
 export default CreateProjectForm 
+

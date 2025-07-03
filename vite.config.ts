@@ -36,13 +36,25 @@ export default defineConfig({
     ]),
     renderer()
   ],
+  server: {
+    port: 5173,
+    open: false, // Prevent browser from opening automatically
+    strictPort: true
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src')
+    },
+    extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json']
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      target: 'es2020'
     }
   },
   build: {
     outDir: 'dist',
+    target: 'es2020',
     rollupOptions: {
       output: {
         manualChunks(id) {

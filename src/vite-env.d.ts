@@ -1,5 +1,10 @@
 /// <reference types="vite/client" />
 
+// Add declaration for node-fetch
+declare module 'node-fetch' {
+  export default function fetch(url: string | Request, init?: RequestInit): Promise<Response>;
+}
+
 interface ElectronAPI {
   // Window control
   minimizeWindow: () => Promise<boolean>
@@ -31,7 +36,9 @@ interface ElectronAPI {
   createPage: (data: any) => Promise<{ success: boolean, id?: string, error?: string }>
   getPages: (chapterId?: string) => Promise<{ success: boolean, pages?: any[], error?: string }>
   getPage: (pageId: string) => Promise<{ success: boolean, page?: any, error?: string }>
+  getPageContent: (pageId: string) => Promise<{ success: boolean, content?: string, page?: any, error?: string }>
   updatePageContent: (pageId: string, content: any, contentText: string) => Promise<{ success: boolean, error?: string }>
+  updatePage: (data: { id: string, content: string }) => Promise<{ success: boolean, error?: string }>
   
   // Updates
   getUpdateSettings: () => Promise<{ success: boolean, settings?: any, error?: string }>

@@ -1,13 +1,7 @@
 import Database from 'better-sqlite3'
-import { fileURLToPath } from 'url'
 import path from 'path'
 import { app } from 'electron'
-import bcrypt from 'bcryptjs'
 import fs from 'fs'
-
-// Workaround for __dirname in ES modules
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
 
 // Types for database entities
 interface Organization {
@@ -61,14 +55,7 @@ interface AuthCredentials {
   created_at: string
 }
 
-interface AppSetting {
-  id: number
-  category: string
-  key: string
-  value: string
-  created_at: string
-  updated_at: string
-}
+
 
 class DatabaseManager {
   private db: any
@@ -772,6 +759,67 @@ class DatabaseManager {
 
   public close() {
     this.db.close()
+  }
+
+  // Migration method to fix null IDs and clean up database
+  public fixDatabaseIntegrity() {
+    console.log("Starting database integrity fix...");
+    
+    try {
+      const transaction = this.db.transaction(() => {
+        // Fix organizations with null IDs
+        const orgsWithNullId = this.db.prepare('SELECT * FROM organizations WHERE id IS NULL').all();
+        for (const org of orgsWithNullId) {
+          const newId = `org_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          this.db.prepare('UPDATE organizations SET id = ? WHERE rowid = ?').run(newId, org.rowid);
+          console.log(`Fixed organization with null ID, new ID: ${newId}`);
+        }
+        
+        // Fix projects with null IDs
+        const projectsWithNullId = this.db.prepare('SELECT * FROM projects WHERE id IS NULL').all();
+        for (const project of projectsWithNullId) {
+          const newId = `proj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          this.db.prepare('UPDATE projects SET id = ? WHERE rowid = ?').run(newId, project.rowid);
+          console.log(`Fixed project with null ID, new ID: ${newId}`);
+        }
+        
+        // Fix books with null IDs
+        const booksWithNullId = this.db.prepare('SELECT * FROM books WHERE id IS NULL').all();
+        for (const book of booksWithNullId) {
+          const newId = `book_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          this.db.prepare('UPDATE books SET id = ? WHERE rowid = ?').run(newId, book.rowid);
+          console.log(`Fixed book with null ID, new ID: ${newId}`);
+        }
+        
+        // Fix chapters with null IDs
+        const chaptersWithNullId = this.db.prepare('SELECT * FROM chapters WHERE id IS NULL').all();
+        for (const chapter of chaptersWithNullId) {
+          const newId = `ch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          this.db.prepare('UPDATE chapters SET id = ? WHERE rowid = ?').run(newId, chapter.rowid);
+          console.log(`Fixed chapter with null ID, new ID: ${newId}`);
+        }
+        
+        // Fix pages with null IDs
+        const pagesWithNullId = this.db.prepare('SELECT * FROM pages WHERE id IS NULL').all();
+        for (const page of pagesWithNullId) {
+          const newId = `page_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          this.db.prepare('UPDATE pages SET id = ? WHERE rowid = ?').run(newId, page.rowid);
+          console.log(`Fixed page with null ID, new ID: ${newId}`);
+        }
+        
+        // Remove any records with invalid foreign keys
+        this.db.prepare('DELETE FROM projects WHERE organization_id IS NULL OR organization_id NOT IN (SELECT id FROM organizations)').run();
+        this.db.prepare('DELETE FROM books WHERE project_id IS NULL OR project_id NOT IN (SELECT id FROM projects)').run();
+        this.db.prepare('DELETE FROM chapters WHERE book_id IS NULL OR book_id NOT IN (SELECT id FROM books)').run();
+        this.db.prepare('DELETE FROM pages WHERE chapter_id IS NULL OR chapter_id NOT IN (SELECT id FROM chapters)').run();
+        
+        console.log("Database integrity fix completed successfully");
+      });
+      
+      transaction();
+    } catch (error) {
+      console.error("Error fixing database integrity:", error);
+    }
   }
 
   // Debug method to log database state

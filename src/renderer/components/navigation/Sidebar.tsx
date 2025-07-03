@@ -1,18 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react'
+import { useState, useEffect } from 'react';
+import type { FC } from 'react';;
 import { 
   ChevronRight, 
-  ChevronDown, 
   Plus, 
   Users, 
-  Book, 
   Search, 
   Settings, 
   Download,
   FileText,
-  Folder,
-  Star,
-  Clock,
-  Tag
 } from 'lucide-react';
 import NavigationTree from './navigation-tree';
 
@@ -28,7 +24,7 @@ interface SidebarProps {
   onCreatePage?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ 
+const Sidebar: FC<SidebarProps> = ({ 
   onSelectItem, 
   onBackToLibrary,
   selectedOrganization,
@@ -40,7 +36,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   onCreatePage
 }) => {
   const [organizations, setOrganizations] = useState<any[]>([]);
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
@@ -80,17 +75,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     }
   };
 
-  const toggleExpand = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const newExpanded = new Set(expandedItems);
-    if (newExpanded.has(id)) {
-      newExpanded.delete(id);
-    } else {
-      newExpanded.add(id);
-    }
-    setExpandedItems(newExpanded);
-  };
-
   const handleCreateOrganization = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!window.electronAPI) {
@@ -124,27 +108,22 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   // Navigation tree handlers
   const handleSelectOrganization = (item: any) => {
-    // We already have the full organization object
     onSelectItem(item, 'organization');
   };
 
   const handleSelectProject = (item: any) => {
-    // We now have the full project object with organization_id
     onSelectItem(item, 'project');
   };
 
   const handleSelectBook = (item: any) => {
-    // We now have the full book object with project_id
     onSelectItem(item, 'book');
   };
 
   const handleSelectChapter = (item: any) => {
-    // We now have the full chapter object with book_id
     onSelectItem(item, 'chapter');
   };
 
   const handleSelectPage = (item: any) => {
-    // We now have the full page object with chapter_id
     onSelectItem(item, 'page');
   };
 
@@ -166,199 +145,191 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const handleAddBook = (projectId: string) => {
     if (onCreateBook) {
-      // Pass the project ID to the parent component
-      onSelectItem({ id: projectId }, 'project'); // First select the project
-      onCreateBook(); // Then open the book creation modal
+      onSelectItem({ id: projectId }, 'project'); 
+      onCreateBook(); 
     }
   };
 
   const handleAddChapter = (bookId: string) => {
     if (onCreateChapter) {
-      // Pass the book ID to the parent component
-      onSelectItem({ id: bookId }, 'book'); // First select the book
-      onCreateChapter(); // Then open the chapter creation modal
+      onSelectItem({ id: bookId }, 'book');
+      onCreateChapter(); 
     }
   };
 
   const handleAddPage = (chapterId: string) => {
     if (onCreatePage) {
-      // Pass the chapter ID to the parent component
-      onSelectItem({ id: chapterId }, 'chapter'); // First select the chapter
-      onCreatePage(); // Then open the page creation modal
+      onSelectItem({ id: chapterId }, 'chapter');
+      onCreatePage(); 
     }
   };
 
-  // Render the Library Sidebar when in library view
-  if (isLibraryView && selectedOrganization) {
-    return (
-      <div className="library-sidebar-container">
-        {/* Header */}
-        <div className="library-sidebar-header">
-          <button onClick={onBackToLibrary} className="back-button">
-            <ChevronRight className="w-4 h-4 rotate-180" />
-            <span>Library</span>
-          </button>
-          
-          <div className="organization-info">
-            <div 
-              className="org-color-indicator"
-              style={{ backgroundColor: '#ffd700' }}
-            />
-            <div className="org-details">
-              <h3 className="org-name">{selectedOrganization.name}</h3>
-              <p className="org-description">{selectedOrganization.description}</p>
+  return (
+    <div className="sidebar">
+      {/* Sidebar Header - Conditional rendering based on view */}
+      <div className="sidebar-header">
+        {isLibraryView && selectedOrganization ? (
+          <>
+            <button onClick={onBackToLibrary} className="back-button flex items-center mb-3 text-matrix-gold hover:text-matrix-gold/80 transition-colors">
+              <ChevronRight className="w-4 h-4 rotate-180 mr-1" />
+              <span>Back to Library</span>
+            </button>
+            
+            <div className="organization-info flex items-center">
+              <div 
+                className="org-color-indicator w-3 h-3 rounded-full mr-2"
+                style={{ backgroundColor: '#ffd700' }}
+              />
+              <div className="org-details">
+                <h3 className="org-name text-sm font-medium text-matrix-gold">{selectedOrganization.name}</h3>
+                {selectedOrganization.description && (
+                  <p className="org-description text-xs text-matrix-gold/70 truncate">{selectedOrganization.description}</p>
+                )}
+              </div>
             </div>
+          </>
+        ) : (
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-3 text-matrix-gold/50" />
+            <input
+              type="text"
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="form-input pl-10 pr-4 py-2 w-full bg-matrix-black border border-matrix-gold/30 rounded text-white"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Quick Search for Library View */}
+      {isLibraryView && selectedOrganization && (
+        <div className="px-3 pb-3">
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-3 text-matrix-gold/50" />
+            <input
+              type="text"
+              placeholder="Search in this organization..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="form-input pl-10 pr-4 py-2 w-full bg-matrix-black border border-matrix-gold/30 rounded text-white"
+            />
           </div>
         </div>
+      )}
 
-        {/* Quick Search */}
-        <div className="sidebar-search">
-          <Search className="search-icon w-4 h-4" />
-          <input
-            type="text"
-            placeholder="Search in this collection..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
-          />
-        </div>
-
-        {/* Quick Actions */}
-        <div className="quick-actions">
-          <button className="quick-action">
-            <Plus className="w-4 h-4" />
+      {/* Quick Actions for Library View */}
+      {isLibraryView && selectedOrganization && (
+        <div className="px-3 pb-3 flex flex-wrap gap-2">
+          <button 
+            className="sidebar-action-btn bg-matrix-gold/10 hover:bg-matrix-gold/20 text-matrix-gold text-xs py-1 px-3 rounded flex items-center"
+            onClick={() => handleAddProject(selectedOrganization.id)}
+          >
+            <Plus className="w-3 h-3 mr-1" />
             <span>New Project</span>
           </button>
-          <button className="quick-action">
-            <FileText className="w-4 h-4" />
+          <button 
+            className="sidebar-action-btn bg-matrix-gold/10 hover:bg-matrix-gold/20 text-matrix-gold text-xs py-1 px-3 rounded flex items-center"
+            onClick={() => {
+              console.log('Quick note functionality would create a temporary note');
+            }}
+          >
+            <FileText className="w-3 h-3 mr-1" />
             <span>Quick Note</span>
           </button>
         </div>
+      )}
 
-        {/* Navigation Tree */}
-        <div className="sidebar-navigation">
-          <NavigationTree
-            onSelectOrganization={handleSelectOrganization}
-            onSelectProject={handleSelectProject}
-            onSelectBook={handleSelectBook}
-            onSelectChapter={handleSelectChapter}
-            onSelectPage={handleSelectPage}
-            onAddOrganization={handleAddOrganization}
-            onAddProject={handleAddProject}
-            onAddBook={handleAddBook}
-            onAddChapter={handleAddChapter}
-            onAddPage={handleAddPage}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  // Default Sidebar View (Home View)
-  return (
-    <>
-      {/* Sidebar Header - REMOVED DUPLICATE MOTHERCORE */}
-      <div className="sidebar-header">
-        {/* Search */}
-        <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-3 text-matrix-gold/50" />
-          <input
-            type="text"
-            placeholder="Search..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="form-input pl-10 pr-4 py-2 w-full bg-matrix-black border border-matrix-gold/30 rounded text-white"
-          />
-        </div>
-      </div>
-
-      {/* Sidebar Content */}
+      {/* Sidebar Content - Combined for both views */}
       <div className="sidebar-content">
-        {/* Organizations Section */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-matrix-amber uppercase tracking-wider">
-              Organizations
-            </h2>
-            <button
-              onClick={() => setShowCreateForm(true)}
-              className="p-1 hover:bg-matrix-gold/20 rounded transition-colors"
-              title="Create Organization"
-            >
-              <Plus className="w-4 h-4 text-matrix-gold" />
-            </button>
+        {/* Default View - Organizations List */}
+        {!isLibraryView && (
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-3 px-2">
+              <h2 className="text-sm font-semibold text-matrix-gold uppercase tracking-wider">
+                Organizations
+              </h2>
+              <button
+                onClick={handleAddOrganization}
+                className="p-1 hover:bg-matrix-gold/20 rounded transition-colors"
+                title="Create Organization"
+              >
+                <Plus className="w-4 h-4 text-matrix-gold" />
+              </button>
+            </div>
+
+            {/* Create Organization Form */}
+            {showCreateForm && (
+              <div className="form-container mb-3 mx-2">
+                <form onSubmit={handleCreateOrganization}>
+                  <input
+                    type="text"
+                    placeholder="Organization name"
+                    value={newOrgData.name}
+                    onChange={(e) => setNewOrgData(prev => ({ ...prev, name: e.target.value }))}
+                    className="form-input"
+                    autoFocus
+                  />
+                  <textarea
+                    placeholder="Description (optional)"
+                    value={newOrgData.description}
+                    onChange={(e) => setNewOrgData(prev => ({ ...prev, description: e.target.value }))}
+                    className="form-input form-textarea"
+                  />
+                  <div className="form-buttons">
+                    <button type="submit" className="btn btn-primary">
+                      Create
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCreateForm(false);
+                        setNewOrgData({ name: '', description: '' });
+                      }}
+                      className="btn btn-secondary"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* Error Display */}
+            {error && (
+              <div className="error mx-2">
+                {error}
+              </div>
+            )}
+
+            {/* Organizations List or Empty State */}
+            {loading ? (
+              <div className="loading">
+                <div>Loading organizations...</div>
+              </div>
+            ) : organizations.length === 0 ? (
+              <div className="text-center py-6 px-2">
+                <Users className="w-10 h-10 text-matrix-gold/50 mx-auto mb-3" />
+                <div className="text-matrix-gold/50 text-sm mb-2">No organizations yet</div>
+                <div className="text-matrix-gold/30 text-xs">Create your first organization to get started</div>
+              </div>
+            ) : null}
           </div>
+        )}
 
-          {/* Create Organization Form */}
-          {showCreateForm && (
-            <div className="form-container fade-in">
-              <form onSubmit={handleCreateOrganization}>
-                <input
-                  type="text"
-                  placeholder="Organization name"
-                  value={newOrgData.name}
-                  onChange={(e) => setNewOrgData(prev => ({ ...prev, name: e.target.value }))}
-                  className="form-input"
-                  autoFocus
-                />
-                <textarea
-                  placeholder="Description (optional)"
-                  value={newOrgData.description}
-                  onChange={(e) => setNewOrgData(prev => ({ ...prev, description: e.target.value }))}
-                  className="form-input form-textarea"
-                />
-                <div className="form-buttons">
-                  <button type="submit" className="btn btn-primary">
-                    Create
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowCreateForm(false);
-                      setNewOrgData({ name: '', description: '' });
-                    }}
-                    className="btn btn-secondary"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          {/* Error Display */}
-          {error && (
-            <div className="error">
-              {error}
-            </div>
-          )}
-
-          {/* Organizations List or Full Tree */}
-          {loading ? (
-            <div className="loading">
-              <div>Loading organizations...</div>
-            </div>
-          ) : organizations.length === 0 ? (
-            <div className="text-center py-8">
-              <Users className="w-12 h-12 text-matrix-gold/50 mx-auto mb-3" />
-              <div className="text-matrix-amber/50 text-sm mb-2">No organizations yet</div>
-              <div className="text-matrix-amber/30 text-xs">Create your first organization to get started</div>
-            </div>
-          ) : (
-            <NavigationTree
-              onSelectOrganization={handleSelectOrganization}
-              onSelectProject={handleSelectProject}
-              onSelectBook={handleSelectBook}
-              onSelectChapter={handleSelectChapter}
-              onSelectPage={handleSelectPage}
-              onAddOrganization={handleAddOrganization}
-              onAddProject={handleAddProject}
-              onAddBook={handleAddBook}
-              onAddChapter={handleAddChapter}
-              onAddPage={handleAddPage}
-            />
-          )}
-        </div>
+        {/* Navigation Tree - Shared between both views */}
+        <NavigationTree
+          onSelectOrganization={handleSelectOrganization}
+          onSelectProject={handleSelectProject}
+          onSelectBook={handleSelectBook}
+          onSelectChapter={handleSelectChapter}
+          onSelectPage={handleSelectPage}
+          onAddOrganization={handleAddOrganization}
+          onAddProject={handleAddProject}
+          onAddBook={handleAddBook}
+          onAddChapter={handleAddChapter}
+          onAddPage={handleAddPage}
+        />
       </div>
 
       {/* Sidebar Footer */}
@@ -367,22 +338,29 @@ const Sidebar: React.FC<SidebarProps> = ({
           <button
             title="Export Data"
             className="p-2 hover:bg-matrix-gold/20 rounded transition-colors"
+            onClick={() => {
+              console.log('Export functionality would export all data');
+            }}
           >
             <Download className="w-4 h-4 text-matrix-gold" />
           </button>
           <button
             title="Settings"
             className="p-2 hover:bg-matrix-gold/20 rounded transition-colors"
+            onClick={() => {
+              console.log('Settings functionality would open settings');
+            }}
           >
             <Settings className="w-4 h-4 text-matrix-gold" />
           </button>
         </div>
-        <div className="text-xs text-matrix-amber/50 text-center mt-2">
+        <div className="text-xs text-matrix-gold/50 text-center mt-2">
           v0.0.1 - Local First
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
 export default Sidebar; 
+

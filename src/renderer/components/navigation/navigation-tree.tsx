@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
+import { useState, useEffect } from 'react'
 import { ChevronRightIcon, ChevronDownIcon, FolderIcon, BookIcon, FileIcon, FileTextIcon, PlusIcon, RefreshCwIcon, InfoIcon } from 'lucide-react'
 
 interface NavigationTreeProps {
@@ -444,82 +445,85 @@ function NavigationTree({
     const isLoading = loading[node.id] || false
     const hasChildren = node.children && node.children.length > 0
     
-    let icon = null
-    switch (node.type) {
-      case 'organization':
-        icon = <FolderIcon size={14} className="text-matrix-amber" />
-        break
-      case 'project':
-        icon = <FolderIcon size={14} className="text-matrix-green" />
-        break
-      case 'book':
-        icon = <BookIcon size={14} className="text-matrix-blue" />
-        break
-      case 'chapter':
-        icon = <FileIcon size={14} className="text-matrix-purple" />
-        break
-      case 'page':
-        icon = <FileTextIcon size={14} className="text-matrix-teal" />
-        break
-    }
+    const icon = getIcon(node.type, node.color)
+    
+    // Calculate depth for proper indentation
+    let depth = 0;
+    if (greatGrandParentId) depth = 3;
+    else if (grandParentId) depth = 2;
+    else if (parentId) depth = 1;
+    
+    // Use CSS classes instead of Tailwind for proper layout
+    const itemClass = `tree-item ${isExpanded ? 'expanded' : ''}`;
+    const indentStyle = { paddingLeft: `${depth * 20 + 12}px` };
     
     return (
-      <div key={node.id} className="my-1">
+      <div key={node.id} className="tree-item-container">
         <div 
-          className={`flex items-center group py-1 px-2 rounded-md ${isExpanded ? 'bg-matrix-green bg-opacity-5' : 'hover:bg-matrix-green hover:bg-opacity-5'}`}
+          className={itemClass}
+          style={indentStyle}
         >
+          {/* Chevron Icon */}
           <div 
-            className="mr-1 cursor-pointer"
+            className="tree-item-chevron"
             onClick={() => toggleExpand(node, parentId, grandParentId, greatGrandParentId)}
           >
             {isLoading ? (
-              <div className="animate-spin text-matrix-amber">
+              <div className="tree-loading">
                 <RefreshCwIcon size={14} />
               </div>
             ) : hasChildren || node.type !== 'page' ? (
-              isExpanded ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />
+              isExpanded ? 
+                <ChevronDownIcon size={14} /> : 
+                <ChevronRightIcon size={14} />
             ) : (
-              <div className="w-[14px]" />
+              <div style={{ width: '14px' }} />
             )}
           </div>
           
+          {/* Main Content */}
           <div 
-            className="flex items-center gap-2 cursor-pointer flex-grow overflow-hidden"
+            className="tree-item-content"
             onClick={() => handleSelect(node)}
           >
-            {icon}
-            <span className="truncate">{node.name}</span>
+            <div className="tree-item-icon">
+              {icon}
+            </div>
+            <span className="tree-item-text">{node.name}</span>
           </div>
           
-          {/* Debug button - only shown in debug mode */}
-          {debugMode && (
-            <button
-              className="p-1 opacity-0 group-hover:opacity-100 hover:bg-matrix-amber hover:bg-opacity-20 rounded"
-              onClick={() => {
-                console.log('Debug info for node:', node);
-                if (node.type === 'organization') {
-                  checkOrganizationProjects(node.id);
-                }
-              }}
-              title="Debug info"
-            >
-              <InfoIcon size={12} />
-            </button>
-          )}
-          
-          {node.type !== 'page' && (
-            <button
-              className="p-1 opacity-0 group-hover:opacity-100 hover:bg-matrix-green hover:bg-opacity-20 rounded"
-              onClick={() => handleAdd(node)}
-              title={`Add to ${node.type}`}
-            >
-              <PlusIcon size={12} />
-            </button>
-          )}
+          {/* Action Buttons */}
+          <div className="tree-item-actions">
+            {/* Debug button - only shown in debug mode */}
+            {debugMode && (
+              <button
+                className="tree-action-btn debug-btn"
+                onClick={() => {
+                  console.log('Debug info for node:', node);
+                  if (node.type === 'organization') {
+                    checkOrganizationProjects(node.id);
+                  }
+                }}
+                title="Debug info"
+              >
+                <InfoIcon size={12} />
+              </button>
+            )}
+            
+            {node.type !== 'page' && (
+              <button
+                className="tree-action-btn add-btn"
+                onClick={() => handleAdd(node)}
+                title={`Add to ${node.type}`}
+              >
+                <PlusIcon size={12} />
+              </button>
+            )}
+          </div>
         </div>
         
         {isExpanded && hasChildren && (
-          <div className="pl-6">
+          <div className="tree-children">
             {node.children!.map(child => 
               renderTreeNode(
                 child, 

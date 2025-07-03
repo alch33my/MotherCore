@@ -1,20 +1,20 @@
-import React, { useState } from 'react';
+import React from 'react'
+import { useState } from 'react';
+import type { FC } from 'react';;
 import { 
-  X, 
-  User, 
+  Monitor, 
   Palette, 
   Database, 
   Shield, 
-  Download, 
+  Settings as SettingsIcon, 
+  X,
+  Download,
   Upload,
-  Monitor,
-  Volume2,
-  Bell,
-  Keyboard,
-  Info,
-  Settings
+  User,
+  Info
 } from 'lucide-react';
 import UpdateSettings from './UpdateSettings';
+import ThemeSettings from './ThemeSettings';
 
 interface MatrixSettings {
   intensity: number;
@@ -32,7 +32,7 @@ interface SettingsPageProps {
 
 type SettingsTab = 'profile' | 'appearance' | 'updates' | 'security' | 'data' | 'system' | 'about';
 
-const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, matrixSettings, onMatrixSettingsChange }) => {
+const SettingsPage: FC<SettingsPageProps> = ({ onClose, matrixSettings, onMatrixSettingsChange }) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('appearance');
   const [settings, setSettings] = useState({
     theme: 'cyberpunk',
@@ -43,6 +43,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, matrixSettings, on
     autoSave: true,
     backupLocation: '',
   });
+  const [profileData, setProfileData] = useState({
+    displayName: '',
+    email: '',
+  });
+  const [isSaving, setIsSaving] = useState(false);
 
   const tabs: { id: SettingsTab; label: string; icon: React.ElementType }[] = [
     { id: 'profile', label: 'Profile', icon: User },
@@ -69,17 +74,42 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, matrixSettings, on
                 <label className="setting-label">Display Name</label>
                 <input 
                   type="text" 
-                  className="setting-input" 
+                  className="form-input" 
                   placeholder="Your name"
+                  value={profileData.displayName}
+                  onChange={(e) => setProfileData(prev => ({ ...prev, displayName: e.target.value }))}
                 />
               </div>
               <div className="setting-item">
                 <label className="setting-label">Email</label>
                 <input 
                   type="email" 
-                  className="setting-input" 
+                  className="form-input" 
                   placeholder="your@email.com"
+                  value={profileData.email}
+                  onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
                 />
+              </div>
+              <div className="setting-item">
+                <button 
+                  className="btn btn-primary"
+                  onClick={async () => {
+                    setIsSaving(true);
+                    try {
+                      // Save profile data to local storage or backend
+                      localStorage.setItem('mothercore-profile', JSON.stringify(profileData));
+                      alert('Profile saved successfully!');
+                    } catch (err) {
+                      console.error('Failed to save profile:', err);
+                      alert('Failed to save profile. Please try again.');
+                    } finally {
+                      setIsSaving(false);
+                    }
+                  }}
+                  disabled={isSaving}
+                >
+                  {isSaving ? 'Saving...' : 'Save Profile'}
+                </button>
               </div>
             </div>
           </div>
@@ -88,7 +118,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, matrixSettings, on
       case 'appearance':
         return (
           <div className="settings-content">
-            <h3 className="settings-section-title">Appearance & Effects</h3>
+            <ThemeSettings />
+            <h3 className="settings-section-title">Matrix Effects</h3>
             <div className="settings-grid">
               <div className="setting-item">
                 <label className="setting-label">Matrix Rain Enabled</label>
@@ -178,20 +209,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, matrixSettings, on
         );
 
       case 'updates':
-        return (
-          <div className="settings-content">
-            <h3 className="settings-section-title">Updates</h3>
-            <div className="settings-grid">
-              <div className="setting-item">
-                <label className="setting-label">Update Settings</label>
-                <button className="setting-button">
-                  <Download className="w-4 h-4 mr-2" />
-                  Update
-                </button>
-              </div>
-            </div>
-          </div>
-        );
+        return <UpdateSettings onClose={() => setActiveTab('appearance')} />;
 
       case 'security':
         return (
@@ -219,7 +237,32 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, matrixSettings, on
             <div className="settings-grid">
               <div className="setting-item">
                 <label className="setting-label">Export All Data</label>
-                <button className="setting-button">
+                <button 
+                  className="btn btn-primary"
+                  onClick={async () => {
+                    try {
+                      if (window.electronAPI) {
+                        const result = await window.electronAPI.saveFileDialog({
+                          title: 'Export MotherCore Data',
+                          defaultPath: `mothercore-export-${new Date().toISOString().split('T')[0]}.json`,
+                          filters: [
+                            { name: 'JSON Files', extensions: ['json'] },
+                            { name: 'All Files', extensions: ['*'] }
+                          ]
+                        });
+                        
+                        if (!result.canceled && result.filePath) {
+                          // In a real implementation, you'd export the data here
+                          console.log('Would export data to:', result.filePath);
+                          alert('Export functionality coming soon!');
+                        }
+                      }
+                    } catch (err) {
+                      console.error('Export failed:', err);
+                      alert('Export failed. Please try again.');
+                    }
+                  }}
+                >
                   <Download className="w-4 h-4 mr-2" />
                   Export
                 </button>
@@ -227,7 +270,32 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, matrixSettings, on
               
               <div className="setting-item">
                 <label className="setting-label">Import Data</label>
-                <button className="setting-button">
+                <button 
+                  className="btn btn-secondary"
+                  onClick={async () => {
+                    try {
+                      if (window.electronAPI) {
+                        const result = await window.electronAPI.openFileDialog({
+                          title: 'Import MotherCore Data',
+                          filters: [
+                            { name: 'JSON Files', extensions: ['json'] },
+                            { name: 'All Files', extensions: ['*'] }
+                          ],
+                          properties: ['openFile']
+                        });
+                        
+                        if (!result.canceled && result.filePaths && result.filePaths.length > 0) {
+                          // In a real implementation, you'd import the data here
+                          console.log('Would import data from:', result.filePaths[0]);
+                          alert('Import functionality coming soon!');
+                        }
+                      }
+                    } catch (err) {
+                      console.error('Import failed:', err);
+                      alert('Import failed. Please try again.');
+                    }
+                  }}
+                >
                   <Upload className="w-4 h-4 mr-2" />
                   Import
                 </button>
@@ -325,7 +393,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, matrixSettings, on
         {/* Header */}
         <div className="settings-header">
           <div className="flex items-center">
-            <Settings className="w-5 h-5 mr-2" />
+            <SettingsIcon className="w-5 h-5 mr-2" />
             <h2>MotherCore Settings</h2>
           </div>
           <button onClick={onClose} className="settings-close">
@@ -359,8 +427,30 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, matrixSettings, on
 
         {/* Footer */}
         <div className="settings-footer">
-          <button onClick={onClose} className="settings-save">
-            Save Changes
+          <button 
+            onClick={async () => {
+              setIsSaving(true);
+              try {
+                // Save all settings
+                localStorage.setItem('mothercore-settings', JSON.stringify(settings));
+                localStorage.setItem('mothercore-matrix-settings', JSON.stringify(matrixSettings));
+                localStorage.setItem('mothercore-profile', JSON.stringify(profileData));
+                
+                // Brief delay to show saving state
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                onClose();
+              } catch (err) {
+                console.error('Failed to save settings:', err);
+                alert('Failed to save settings. Please try again.');
+              } finally {
+                setIsSaving(false);
+              }
+            }}
+            className="btn btn-primary"
+            disabled={isSaving}
+          >
+            {isSaving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </div>
@@ -369,3 +459,5 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, matrixSettings, on
 };
 
 export default SettingsPage; 
+
+

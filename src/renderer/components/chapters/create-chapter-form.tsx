@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React from 'react'
+import { useState } from 'react'
 import { SaveIcon, XIcon } from 'lucide-react'
 
 interface CreateChapterFormProps {
@@ -105,23 +106,30 @@ function CreateChapterForm({ bookId, onClose, onSuccess }: CreateChapterFormProp
           <div className="text-matrix-error text-sm">{error}</div>
         )}
         
-        <div className="flex justify-end pt-2">
+        <div className="form-buttons">
           <button
             type="button"
             onClick={onClose}
-            className="mr-2 px-4 py-2 text-matrix-green hover:text-matrix-gold"
+            className="btn btn-secondary"
+            disabled={isSubmitting}
           >
+            <XIcon size={16} className="mr-2" />
             Cancel
           </button>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex items-center px-4 py-2 bg-matrix-green bg-opacity-20 hover:bg-opacity-30 text-matrix-gold rounded"
+            className="btn btn-primary"
           >
-            {isSubmitting ? 'Creating...' : (
+            {isSubmitting ? (
               <>
-                <SaveIcon size={16} className="mr-1" />
-                Create
+                <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin mr-2"></div>
+                Creating...
+              </>
+            ) : (
+              <>
+                <SaveIcon size={16} className="mr-2" />
+                Create Chapter
               </>
             )}
           </button>
@@ -132,3 +140,4 @@ function CreateChapterForm({ bookId, onClose, onSuccess }: CreateChapterFormProp
 }
 
 export default CreateChapterForm 
+

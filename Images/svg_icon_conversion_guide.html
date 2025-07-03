@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MotherCore Icon Conversion Guide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #161719;
+            color: #fefcac;
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            text-shadow: 0 0 20px #fefcac;
+            color: #fefcac;
+        }
+        
+        .section {
+            margin-bottom: 3rem;
+            background: rgba(254, 252, 172, 0.05);
+            border: 1px solid rgba(254, 252, 172, 0.2);
+            border-radius: 8px;
+            padding: 2rem;
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: #6e3d21;
+            border-bottom: 2px solid #6e3d21;
+            padding-bottom: 0.5rem;
+        }
+        
+        .step {
+            background: #1a1a1c;
+            border: 1px solid rgba(254, 252, 172, 0.3);
+            border-radius: 6px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .step-number {
+            background: #6e3d21;
+            color: #fefcac;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 1rem;
+        }
+        
+        .code-block {
+            background: #0f0f11;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            position: relative;
+        }
+        
+        .code-block::before {
+            content: 'Code';
+            position: absolute;
+            top: -10px;
+            right: 10px;
+            background: #6e3d21;
+            color: #fefcac;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.7rem;
+        }
+        
+        .tool-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .tool-card {
+            background: #1a1a1c;
+            border: 1px solid rgba(110, 61, 33, 0.3);
+            border-radius: 6px;
+            padding: 1rem;
+            text-align: center;
+        }
+        
+        .tool-card h4 {
+            color: #6e3d21;
+            margin-bottom: 0.5rem;
+        }
+        
+        .demo-icon {
+            width: 48px;
+            height: 48px;
+            margin: 1rem auto;
+            border: 2px solid #fefcac;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #161719;
+        }
+        
+        .color-demo {
+            display: flex;
+            gap: 1rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+        
+        .color-sample {
+            width: 60px;
+            height: 60px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+        
+        .warning {
+            background: rgba(110, 61, 33, 0.2);
+            border: 1px solid #6e3d21;
+            border-radius: 4px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .highlight {
+            background: rgba(254, 252, 172, 0.1);
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 MotherCore Icon Conversion Guide</h1>
+        <p style="text-align: center; margin-bottom: 3rem; color: #6e3d21;">Transform your AI-generated images into flexible, customizable SVG icons</p>
+        
+        <!-- Step 1: Image to SVG Conversion -->
+        <div class="section">
+            <h2 class="section-title">📐 Step 1: Convert Images to SVG</h2>
+            
+            <div class="step">
+                <span class="step-number">1</span>
+                <strong>Choose Your Conversion Method:</strong>
+                
+                <div class="tool-grid">
+                    <div class="tool-card">
+                        <h4>Adobe Illustrator</h4>
+                        <p>Best quality, manual control</p>
+                        <p><span class="highlight">Image Trace</span> → <span class="highlight">Expand</span> → Export SVG</p>
+                    </div>
+                    <div class="tool-card">
+                        <h4>Inkscape (Free)</h4>
+                        <p>Open source, good quality</p>
+                        <p><span class="highlight">Trace Bitmap</span> → Manual cleanup</p>
+                    </div>
+                    <div class="tool-card">
+                        <h4>Vector Magic</h4>
+                        <p>Online converter, automated</p>
+                        <p>Upload → Auto-trace → Download SVG</p>
+                    </div>
+                    <div class="tool-card">
+                        <h4>Figma (Free)</h4>
+                        <p>Web-based, easy to use</p>
+                        <p>Import → Vectorize → Export SVG</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">2</span>
+                <strong>Clean Up Your SVG:</strong>
+                <p>After conversion, you'll need to structure your SVG properly for color customization.</p>
+            </div>
+        </div>
+
+        <!-- Step 2: SVG Structure -->
+        <div class="section">
+            <h2 class="section-title">🛠️ Step 2: Structure SVG for Color Control</h2>
+            
+            <div class="step">
+                <span class="step-number">1</span>
+                <strong>Basic SVG Template Structure:</strong>
+                
+                <div class="code-block">
+&lt;svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"&gt;
+  &lt;!-- Main icon shape (uses primary color) --&gt;
+  &lt;path class="icon-primary" d="M12 2L22 7v10L12 22 2 17V7l10-5z"/&gt;
+  
+  &lt;!-- Accent details (uses accent color) --&gt;
+  &lt;circle class="icon-accent" cx="12" cy="12" r="3"/&gt;
+  
+  &lt;!-- Neural pathways (uses primary with opacity) --&gt;
+  &lt;path class="icon-neural" d="M8 8l8 8M16 8l-8 8" stroke-width="0.5"/&gt;
+&lt;/svg&gt;
+                </div>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">2</span>
+                <strong>CSS Class Structure for MotherCore:</strong>
+                
+                <div class="code-block">
+/* CSS Variables for MotherCore Colors */
+:root {
+  --mothercore-primary: #fefcac;    /* Main gold/cream */
+  --mothercore-accent: #6e3d21;     /* Amber-red accent */
+  --mothercore-bg: #161719;         /* Dark background */
+}
+
+/* Icon Classes */
+.icon-primary {
+  fill: var(--mothercore-primary);
+  stroke: var(--mothercore-primary);
+}
+
+.icon-accent {
+  fill: var(--mothercore-accent);
+  stroke: var(--mothercore-accent);
+}
+
+.icon-neural {
+  fill: none;
+  stroke: var(--mothercore-primary);
+  opacity: 0.6;
+}
+
+.icon-background {
+  fill: var(--mothercore-bg);
+}
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Practical Examples -->
+        <div class="section">
+            <h2 class="section-title">💡 Step 3: Practical Icon Examples</h2>
+            
+            <div class="step">
+                <span class="step-number">1</span>
+                <strong>Close Button Icon Example:</strong>
+                
+                <div class="code-block">
+&lt;!-- MotherCore Close Icon --&gt;
+&lt;svg viewBox="0 0 24 24" fill="none" class="mothercore-icon"&gt;
+  &lt;!-- Background circle --&gt;
+  &lt;circle class="icon-background" cx="12" cy="12" r="10"/&gt;
+  
+  &lt;!-- Main X shape --&gt;
+  &lt;path class="icon-primary" 
+        d="M18 6L6 18M6 6l12 12" 
+        stroke-width="2" 
+        stroke-linecap="round"/&gt;
+  
+  &lt;!-- Neural intersection point --&gt;
+  &lt;circle class="icon-accent" cx="12" cy="12" r="2"/&gt;
+  
+  &lt;!-- Circuit pathways --&gt;
+  &lt;path class="icon-neural" 
+        d="M8 8l8 8M16 8l-8 8" 
+        stroke-width="0.5" 
+        opacity="0.6"/&gt;
+&lt;/svg&gt;
+                </div>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">2</span>
+                <strong>Folder Icon Example:</strong>
+                
+                <div class="code-block">
+&lt;!-- MotherCore Folder Icon --&gt;
+&lt;svg viewBox="0 0 24 24" fill="none" class="mothercore-icon"&gt;
+  &lt;!-- Main folder shape --&gt;
+  &lt;path class="icon-primary" 
+        d="M4 19h16V7H8l-2-2H4v14z" 
+        fill="none" 
+        stroke-width="2"/&gt;
+  
+  &lt;!-- Circuit patterns inside folder --&gt;
+  &lt;rect class="icon-neural" x="8" y="10" width="8" height="1" opacity="0.6"/&gt;
+  &lt;rect class="icon-neural" x="8" y="12" width="6" height="1" opacity="0.4"/&gt;
+  &lt;rect class="icon-neural" x="8" y="14" width="4" height="1" opacity="0.2"/&gt;
+  
+  &lt;!-- Neural connection points --&gt;
+  &lt;circle class="icon-accent" cx="6" cy="11" r="0.5"/&gt;
+  &lt;circle class="icon-accent" cx="18" cy="9" r="0.5"/&gt;
+  
+  &lt;!-- Connection pathway --&gt;
+  &lt;path class="icon-neural" 
+        d="M6 9l12 2" 
+        stroke-width="0.5" 
+        opacity="0.3"/&gt;
+&lt;/svg&gt;
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4: Implementation -->
+        <div class="section">
+            <h2 class="section-title">⚙️ Step 4: Implementation in Your App</h2>
+            
+            <div class="step">
+                <span class="step-number">1</span>
+                <strong>React Component Structure:</strong>
+                
+                <div class="code-block">
+// IconComponent.tsx
+import React from 'react';
+
+interface IconProps {
+  name: string;
+  size?: number;
+  className?: string;
+  primaryColor?: string;
+  accentColor?: string;
+}
+
+const Icon: React.FC&lt;IconProps&gt; = ({ 
+  name, 
+  size = 24, 
+  className = '',
+  primaryColor = '#fefcac',
+  accentColor = '#6e3d21'
+}) =&gt; {
+  const iconStyle = {
+    '--mothercore-primary': primaryColor,
+    '--mothercore-accent': accentColor,
+  } as React.CSSProperties;
+
+  return (
+    &lt;span 
+      className={`mothercore-icon ${className}`}
+      style={iconStyle}
+    &gt;
+      {getIconSVG(name, size)}
+    &lt;/span&gt;
+  );
+};
+
+const getIconSVG = (name: string, size: number) =&gt; {
+  const icons = {
+    close: `&lt;svg width="${size}" height="${size}" viewBox="0 0 24 24"&gt;...&lt;/svg&gt;`,
+    folder: `&lt;svg width="${size}" height="${size}" viewBox="0 0 24 24"&gt;...&lt;/svg&gt;`,
+    // ... more icons
+  };
+  
+  return &lt;div dangerouslySetInnerHTML={{__html: icons[name]}} /&gt;;
+};
+                </div>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">2</span>
+                <strong>Dynamic Color Theming:</strong>
+                
+                <div class="code-block">
+// Theme System
+const themes = {
+  default: {
+    primary: '#fefcac',
+    accent: '#6e3d21',
+    background: '#161719'
+  },
+  matrix: {
+    primary: '#00ff41',
+    accent: '#008f11',
+    background: '#0a0a0a'
+  },
+  corporate: {
+    primary: '#ffd700',
+    accent: '#ff6b35',
+    background: '#1a1a1a'
+  }
+};
+
+// Usage in component
+&lt;Icon 
+  name="close" 
+  primaryColor={currentTheme.primary}
+  accentColor={currentTheme.accent}
+/&gt;
+                </div>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">3</span>
+                <strong>CSS Custom Properties for Global Control:</strong>
+                
+                <div class="code-block">
+/* Global CSS Variables */
+.app-container {
+  --icon-primary: #fefcac;
+  --icon-accent: #6e3d21;
+  --icon-background: #161719;
+  --icon-neural: rgba(254, 252, 172, 0.6);
+}
+
+/* Dark mode override */
+.app-container.dark-mode {
+  --icon-primary: #00ff41;
+  --icon-accent: #ffd700;
+  --icon-background: #0a0a0a;
+}
+
+/* All icons automatically update */
+.mothercore-icon .icon-primary {
+  fill: var(--icon-primary);
+  stroke: var(--icon-primary);
+}
+
+.mothercore-icon .icon-accent {
+  fill: var(--icon-accent);
+  stroke: var(--icon-accent);
+}
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 5: Advanced Features -->
+        <div class="section">
+            <h2 class="section-title">🚀 Step 5: Advanced Icon Features</h2>
+            
+            <div class="step">
+                <span class="step-number">1</span>
+                <strong>Animated Neural Pathways:</strong>
+                
+                <div class="code-block">
+/* CSS Animations for Neural Effects */
+@keyframes neural-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes circuit-flow {
+  0% { stroke-dashoffset: 20; }
+  100% { stroke-dashoffset: 0; }
+}
+
+.icon-neural {
+  animation: neural-pulse 2s ease-in-out infinite;
+  stroke-dasharray: 2 2;
+  animation: circuit-flow 1s linear infinite;
+}
+
+.mothercore-icon:hover .icon-neural {
+  animation-duration: 0.5s;
+}
+                </div>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">2</span>
+                <strong>State-Based Icon Changes:</strong>
+                
+                <div class="code-block">
+// Dynamic icon states
+const IconWithState: React.FC&lt;{state: 'normal' | 'active' | 'error'}&gt; = ({ state }) =&gt; {
+  const stateColors = {
+    normal: { primary: '#fefcac', accent: '#6e3d21' },
+    active: { primary: '#00ff41', accent: '#ffd700' },
+    error: { primary: '#ff4444', accent: '#cc0000' }
+  };
+  
+  return (
+    &lt;Icon 
+      name="status"
+      primaryColor={stateColors[state].primary}
+      accentColor={stateColors[state].accent}
+      className={`icon-state-${state}`}
+    /&gt;
+  );
+};
+                </div>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">3</span>
+                <strong>Icon Size Scaling:</strong>
+                
+                <div class="code-block">
+// Responsive icon sizing
+const iconSizes = {
+  xs: 12,
+  sm: 16,
+  md: 24,
+  lg: 32,
+  xl: 48,
+  xxl: 64
+};
+
+// Usage
+&lt;Icon name="folder" size={iconSizes.lg} /&gt;
+&lt;Icon name="close" size={iconSizes.sm} /&gt;
+
+/* CSS for consistent scaling */
+.mothercore-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mothercore-icon svg {
+  width: 100%;
+  height: 100%;
+}
+                </div>
+            </div>
+        </div>
+
+        <!-- Color Demo -->
+        <div class="section">
+            <h2 class="section-title">🎨 Color Customization Demo</h2>
+            
+            <div class="step">
+                <span class="step-number">Demo</span>
+                <strong>See How Colors Change:</strong>
+                
+                <div class="color-demo">
+                    <div class="color-sample" style="background: #fefcac; color: #161719;">
+                        Default<br>#fefcac
+                    </div>
+                    <div class="color-sample" style="background: #00ff41; color: #000;">
+                        Matrix<br>#00ff41
+                    </div>
+                    <div class="color-sample" style="background: #ffd700; color: #000;">
+                        Gold<br>#ffd700
+                    </div>
+                    <div class="color-sample" style="background: #ff6b35; color: #fff;">
+                        Orange<br>#ff6b35
+                    </div>
+                </div>
+                
+                <p>Your icons will automatically adapt to any color scheme while maintaining the cybernetic brain aesthetic!</p>
+            </div>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ Important Notes:</strong>
+            <ul style="margin-left: 2rem; margin-top: 1rem;">
+                <li>Always use <span class="highlight">viewBox</span> instead of fixed width/height for scalability</li>
+                <li>Keep SVG files clean - remove unnecessary groups and transforms</li>
+                <li>Use CSS classes instead of inline styles for theme flexibility</li>
+                <li>Test icons at multiple sizes (16px, 24px, 48px) to ensure clarity</li>
+                <li>Maintain consistent stroke-width ratios across all icons</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

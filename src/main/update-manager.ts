@@ -174,7 +174,8 @@ export class SecureUpdateManager {
         }
         
         const fileStream = await fs.open(downloadPath, 'w')
-        const buffer = await response.buffer()
+        const arrayBuffer = await response.arrayBuffer()
+        const buffer = Buffer.from(arrayBuffer)
         await fileStream.write(buffer)
         await fileStream.close()
       } else {
@@ -199,7 +200,7 @@ export class SecureUpdateManager {
   /**
    * Install only with explicit user approval
    */
-  public async installUpdate(updatePath: string, userApproved: boolean): Promise<boolean> {
+  public async installUpdate(userApproved: boolean): Promise<boolean> {
     if (!userApproved || !this.settings.requireApproval) {
       console.error('Update installation rejected: User approval required')
       return false
@@ -248,12 +249,11 @@ export class SecureUpdateManager {
   /**
    * Rollback if update fails
    */
-  public async rollbackUpdate(backupPath: string): Promise<boolean> {
+  public async rollbackUpdate(): Promise<boolean> {
     try {
       // In a real implementation, this would:
-      // 1. Extract the backup archive
-      // 2. Replace current application files with backup files
-      // 3. Restore the previous version information
+      // 1. Find the most recent backup
+      // 2. Restore it
       
       return true
     } catch (error) {

@@ -1,3 +1,4 @@
+import React from 'react'
 import { useEffect, useState, useCallback } from 'react'
 import './App.css'
 import './renderer/styles/premium-ui.css' // Import premium UI styles
@@ -9,16 +10,14 @@ import TitleBar from './renderer/components/layout/TitleBar'
 import BottomBar from './renderer/components/layout/BottomBar'
 import SettingsPage from './renderer/components/settings/SettingsPage'
 import AuthScreen from './renderer/components/auth/AuthScreen' // Import AuthScreen
+import { ThemeProvider } from './renderer/context/ThemeContext'
 // Import form components
 import CreateOrganizationForm from './renderer/components/organizations/create-organization-form'
 import CreateProjectForm from './renderer/components/projects/create-project-form'
 import CreateBookForm from './renderer/components/books/create-book-form'
 import CreateChapterForm from './renderer/components/chapters/create-chapter-form'
 import CreatePageForm from './renderer/components/content/create-page-form'
-import ContentContainer from './renderer/components/content/content-container'
-
-// Update the type definition at the top of the file
-type ContentType = 'organization' | 'project' | 'book' | 'chapter' | 'page' | null
+import ChatPanel from './renderer/components/layout/ChatPanel'
 
 type Toast = {
   id: string
@@ -131,6 +130,15 @@ function App() {
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString())
   const [wordCount, setWordCount] = useState(0)
   const [charCount, setCharCount] = useState(0)
+  
+  // Update time every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date().toLocaleTimeString())
+    }, 1000)
+    
+    return () => clearInterval(timer)
+  }, [])
   
   // ADD: Matrix rain settings state
   const [matrixSettings, setMatrixSettings] = useState({
@@ -325,129 +333,6 @@ function App() {
     setShowSettings(true);
   };
 
-  // ADD: Modal handlers for creation forms
-  const handleCreateOrganization = () => {
-    // Close modal first
-    setShowCreateOrgForm(false);
-    console.log('Organization created successfully');
-    addToast('Organization created successfully!', 'success');
-    
-    // Reload organizations to refresh the UI
-    if (typeof window !== 'undefined' && window.electronAPI) {
-      // Small delay to ensure database has updated
-      setTimeout(() => {
-        window.electronAPI!.getOrganizations().then((result) => {
-          if (result.success) {
-            console.log('Organizations reloaded successfully');
-            // Force reload the navigation tree by triggering a state change
-            setSelectedType('');
-            setSelectedItem(null);
-          }
-        });
-      }, 300);
-    }
-  };
-
-  const handleCreateProject = () => {
-    // Close modal first
-    setShowCreateProjectForm(false);
-    console.log('Project created successfully');
-    addToast('Project created successfully!', 'success');
-    
-    // Reload projects after creation
-    if (typeof window !== 'undefined' && window.electronAPI && activeOrgId) {
-      // Small delay to ensure database has updated
-      setTimeout(() => {
-        window.electronAPI!.getProjects(activeOrgId).then((result) => {
-          if (result.success) {
-            console.log('Projects reloaded successfully');
-            // Force reload the main content by triggering a state change
-            if (selectedItem && selectedType === 'organization' && selectedItem.id === activeOrgId) {
-              const temp = selectedItem;
-              setSelectedItem(null);
-              setTimeout(() => setSelectedItem(temp), 50);
-            }
-          }
-        });
-      }, 300);
-    }
-  };
-
-  const handleCreateBook = () => {
-    // Close modal first
-    setShowCreateBookForm(false);
-    console.log('Book created successfully');
-    addToast('Book created successfully!', 'success');
-    
-    // Reload books after creation
-    if (typeof window !== 'undefined' && window.electronAPI && activeProjectId) {
-      // Small delay to ensure database has updated
-      setTimeout(() => {
-        window.electronAPI!.getBooks(activeProjectId).then((result) => {
-          if (result.success) {
-            console.log('Books reloaded successfully');
-            // Force reload the main content by triggering a state change
-            if (selectedItem && selectedType === 'project' && selectedItem.id === activeProjectId) {
-              const temp = selectedItem;
-              setSelectedItem(null);
-              setTimeout(() => setSelectedItem(temp), 50);
-            }
-          }
-        });
-      }, 300);
-    }
-  };
-
-  const handleCreateChapter = () => {
-    // Close modal first
-    setShowCreateChapterForm(false);
-    console.log('Chapter created successfully');
-    addToast('Chapter created successfully!', 'success');
-    
-    // Reload chapters after creation
-    if (typeof window !== 'undefined' && window.electronAPI && activeBookId) {
-      // Small delay to ensure database has updated
-      setTimeout(() => {
-        window.electronAPI!.getChapters(activeBookId).then((result) => {
-          if (result.success) {
-            console.log('Chapters reloaded successfully');
-            // Force reload the main content by triggering a state change
-            if (selectedItem && selectedType === 'book' && selectedItem.id === activeBookId) {
-              const temp = selectedItem;
-              setSelectedItem(null);
-              setTimeout(() => setSelectedItem(temp), 50);
-            }
-          }
-        });
-      }, 300);
-    }
-  };
-
-  const handleCreatePage = () => {
-    // Close modal first
-    setShowCreatePageForm(false);
-    console.log('Page created successfully');
-    addToast('Page created successfully!', 'success');
-    
-    // Reload pages after creation
-    if (typeof window !== 'undefined' && window.electronAPI && activeChapterId) {
-      // Small delay to ensure database has updated
-      setTimeout(() => {
-        window.electronAPI!.getPages(activeChapterId).then((result) => {
-          if (result.success) {
-            console.log('Pages reloaded successfully');
-            // Force reload the main content by triggering a state change
-            if (selectedItem && selectedType === 'chapter' && selectedItem.id === activeChapterId) {
-              const temp = selectedItem;
-              setSelectedItem(null);
-              setTimeout(() => setSelectedItem(temp), 50);
-            }
-          }
-        });
-      }, 300);
-    }
-  };
-  
   // Handle content refresh from child components
   const handleRefreshContent = useCallback(() => {
     if (selectedItem && selectedType) {
@@ -457,6 +342,14 @@ function App() {
       addToast('Content refreshed', 'info', 2000);
     }
   }, [selectedItem, selectedType]);
+
+  // Add state for chat panel visibility
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
+  // Add toggle function for chat panel
+  const toggleChat = () => {
+    setIsChatOpen(prev => !prev);
+  };
 
   function renderToasts() {
     return (
@@ -506,149 +399,167 @@ function App() {
 
   function renderMainApplication() {
     return (
-      <div className="app-container">
-        {/* Matrix Rain Effect in background */}
-        <div className="matrix-background">
-          {matrixSettings.enabled && (
+      <ThemeProvider>
+        <div className="app-container">
+          {/* Matrix Rain Background */}
+          <div className="matrix-background">
             <MatrixRain 
-              colorScheme={matrixSettings.colorScheme}
               intensity={matrixSettings.intensity}
               speed={matrixSettings.speed}
+              colorScheme={matrixSettings.colorScheme}
               density={matrixSettings.density}
-            />
-          )}
-        </div>
-        
-        {/* Toast notifications */}
-        {renderToasts()}
-        
-        {/* Main App Content */}
-        <div className="app-content">
-          {/* Sidebar */}
-          <div className="sidebar">
-            <Sidebar 
-              onSelectItem={(item, type) => {
-                handleSelectItem(item, type);
-              }}
-              isLibraryView={isLibraryView}
-              selectedOrganization={selectedOrganization}
-              onBackToLibrary={handleBackToLibrary}
-              onCreateOrganization={() => setShowCreateOrgForm(true)}
-              onCreateProject={() => setShowCreateProjectForm(true)}
-              onCreateBook={() => setShowCreateBookForm(true)}
-              onCreateChapter={() => setShowCreateChapterForm(true)}
-              onCreatePage={() => setShowCreatePageForm(true)}
             />
           </div>
           
-          {/* Main Content Area */}
-          <div className="main-content">
+          {/* Main App Content */}
+          <div className="app-content">
             {/* Title Bar */}
             <TitleBar 
               onSettingsClick={handleSettingsClick}
               onDebugRefresh={forceRefresh}
-              currentUser="Knowledge Keeper" // Replace with actual user name
+              currentUser="Knowledge Keeper"
             />
             
-            {/* Content Area */}
-            <div className="content-area">
-              <MainContent
-                selectedItem={selectedItem}
-                selectedType={selectedType}
-                onAddProject={(orgId) => {
-                  setActiveOrgId(orgId);
-                  setShowCreateProjectForm(true);
-                }}
-                onAddBook={(projectId) => {
-                  setActiveProjectId(projectId);
-                  setShowCreateBookForm(true);
-                }}
-                onAddChapter={(bookId) => {
-                  setActiveBookId(bookId);
-                  setShowCreateChapterForm(true);
-                }}
-                onAddPage={(chapterId) => {
-                  setActiveChapterId(chapterId);
-                  setShowCreatePageForm(true);
-                }}
+            {/* Main Content */}
+            <div className={`main-content-layout ${isChatOpen ? 'chat-open' : ''}`}>
+              {/* Sidebar */}
+              <Sidebar 
+                onSelectItem={handleSelectItem}
+                onBackToLibrary={handleBackToLibrary}
+                selectedOrganization={selectedOrganization}
+                isLibraryView={isLibraryView}
+                onCreateOrganization={() => setShowCreateOrgForm(true)}
+                onCreateProject={() => setShowCreateProjectForm(true)}
+                onCreateBook={() => setShowCreateBookForm(true)}
+                onCreateChapter={() => setShowCreateChapterForm(true)}
+                onCreatePage={() => setShowCreatePageForm(true)}
+              />
+              
+              {/* Main Content Area */}
+              <div className="content-area">
+                <MainContent 
+                  selectedItem={selectedItem}
+                  selectedType={selectedType}
+                  onEditorStatsChange={handleEditorStatsChange}
+                  currentTime={currentTime}
+                  wordCount={wordCount}
+                  charCount={charCount}
+                  onRefreshContent={handleRefreshContent}
+                  onAddProject={(orgId) => {
+                    setActiveOrgId(orgId);
+                    setShowCreateProjectForm(true);
+                  }}
+                  onAddBook={(projectId) => {
+                    setActiveProjectId(projectId);
+                    setShowCreateBookForm(true);
+                  }}
+                  onAddChapter={(bookId) => {
+                    setActiveBookId(bookId);
+                    setShowCreateChapterForm(true);
+                  }}
+                  onAddPage={(chapterId) => {
+                    setActiveChapterId(chapterId);
+                    setShowCreatePageForm(true);
+                  }}
+                />
+              </div>
+              
+              {/* Chat Panel */}
+              <ChatPanel 
+                isOpen={isChatOpen} 
+                onClose={() => setIsChatOpen(false)} 
               />
             </div>
             
             {/* Bottom Bar */}
-            <BottomBar stats={stats} />
+            <BottomBar 
+              stats={{
+                organizations: stats.organizations,
+                projects: stats.projects,
+                books: 0, // Use default value if not available
+                chapters: 0, // Use default value if not available
+                notes: stats.notes,
+                storage: stats.storage
+              }}
+              onToggleChat={toggleChat}
+              isChatOpen={isChatOpen}
+            />
           </div>
+          
+          {/* Settings Page */}
+          {showSettings && (
+            <SettingsPage 
+              onClose={() => setShowSettings(false)}
+              matrixSettings={matrixSettings}
+              onMatrixSettingsChange={setMatrixSettings}
+            />
+          )}
+          
+          {/* Create Forms */}
+          {showCreateOrgForm && (
+            <CreateOrganizationForm
+              onClose={() => setShowCreateOrgForm(false)}
+              onSuccess={() => {
+                setShowCreateOrgForm(false);
+                addToast(`Organization created successfully!`, 'success');
+                forceRefresh();
+              }}
+            />
+          )}
+          
+          {showCreateProjectForm && activeOrgId && (
+            <CreateProjectForm
+              organizationId={activeOrgId}
+              onClose={() => setShowCreateProjectForm(false)}
+              onSuccess={() => {
+                setShowCreateProjectForm(false);
+                addToast(`Project created successfully!`, 'success');
+                forceRefresh();
+              }}
+            />
+          )}
+          
+          {showCreateBookForm && activeProjectId && (
+            <CreateBookForm
+              projectId={activeProjectId}
+              onClose={() => setShowCreateBookForm(false)}
+              onSuccess={() => {
+                setShowCreateBookForm(false);
+                addToast(`Book created successfully!`, 'success');
+                forceRefresh();
+              }}
+            />
+          )}
+          
+          {showCreateChapterForm && activeBookId && (
+            <CreateChapterForm
+              bookId={activeBookId}
+              onClose={() => setShowCreateChapterForm(false)}
+              onSuccess={() => {
+                setShowCreateChapterForm(false);
+                addToast(`Chapter created successfully!`, 'success');
+                forceRefresh();
+              }}
+            />
+          )}
+          
+          {showCreatePageForm && activeChapterId && (
+            <CreatePageForm
+              chapterId={activeChapterId}
+              onClose={() => setShowCreatePageForm(false)}
+              onSuccess={() => {
+                setShowCreatePageForm(false);
+                addToast(`Page created successfully!`, 'success');
+                forceRefresh();
+              }}
+            />
+          )}
+          
+          {/* Toast Notifications */}
+          {renderToasts()}
         </div>
-        
-        {/* Settings Overlay */}
-        {showSettings && (
-          <SettingsPage 
-            onClose={() => setShowSettings(false)}
-            matrixSettings={matrixSettings}
-            onMatrixSettingsChange={setMatrixSettings}
-          />
-        )}
-        
-        {/* Modal Forms */}
-        {showCreateOrgForm && (
-          <div className="modal-overlay">
-            <div className="modal-container">
-              <CreateOrganizationForm 
-                onClose={() => setShowCreateOrgForm(false)}
-                onSuccess={handleCreateOrganization}
-              />
-            </div>
-          </div>
-        )}
-        
-        {showCreateProjectForm && (
-          <div className="modal-overlay">
-            <div className="modal-container">
-              <CreateProjectForm 
-                onClose={() => setShowCreateProjectForm(false)}
-                onSuccess={handleCreateProject}
-                organizationId={activeOrgId || ''}
-              />
-            </div>
-          </div>
-        )}
-        
-        {showCreateBookForm && (
-          <div className="modal-overlay">
-            <div className="modal-container">
-              <CreateBookForm 
-                onClose={() => setShowCreateBookForm(false)}
-                onSuccess={handleCreateBook}
-                projectId={activeProjectId || ''}
-              />
-            </div>
-          </div>
-        )}
-        
-        {showCreateChapterForm && (
-          <div className="modal-overlay">
-            <div className="modal-container">
-              <CreateChapterForm 
-                onClose={() => setShowCreateChapterForm(false)}
-                onSuccess={handleCreateChapter}
-                bookId={activeBookId || ''}
-              />
-            </div>
-          </div>
-        )}
-        
-        {showCreatePageForm && (
-          <div className="modal-overlay">
-            <div className="modal-container">
-              <CreatePageForm 
-                onClose={() => setShowCreatePageForm(false)}
-                onSuccess={handleCreatePage}
-                chapterId={activeChapterId || ''}
-              />
-            </div>
-          </div>
-        )}
-      </div>
-    )
+      </ThemeProvider>
+    );
   }
 
   // Show loading state while checking authentication status
@@ -677,16 +588,18 @@ function App() {
         <AuthScreen 
           onAuthenticated={handleAuthenticated}
           isSignUp={authSetupNeeded}
+          error={authError}
         />
       </>
     )
   }
 
   return (
-    <>
+    <ThemeProvider>
       {renderMainApplication()}
-    </>
+    </ThemeProvider>
   )
 }
 
 export default App
+

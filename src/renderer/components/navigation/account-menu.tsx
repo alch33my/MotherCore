@@ -1,3 +1,4 @@
+import React from 'react'
 import { useState } from 'react'
 import { UserCircle, LogOut, Settings, HelpCircle, Info } from 'lucide-react'
 

@@ -1,19 +1,25 @@
-import React, { useState } from 'react';
-import { Eye, EyeOff, Lock, User, Shield } from 'lucide-react';
+import React from 'react'
+import { useState } from 'react';
+import type { FC } from 'react';;
+import { Eye, EyeOff, Lock, Shield } from 'lucide-react';
 import MatrixRain from '../effects/matrix-rain';
 
 interface AuthScreenProps {
   onAuthenticated: (password: string) => void;
   isSignUp?: boolean;
+  error?: string;
 }
 
-const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated, isSignUp = false }) => {
+const AuthScreen: FC<AuthScreenProps> = ({ onAuthenticated, isSignUp = false, error: externalError }) => {
   const [isNewUser, setIsNewUser] = useState(isSignUp);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  // Use external error if provided
+  const displayError = externalError || error;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,9 +126,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated, isSignUp = fal
             )}
 
             {/* Error Display */}
-            {error && (
+            {displayError && (
               <div className="auth-error">
-                {error}
+                {displayError}
               </div>
             )}
 
@@ -179,3 +185,5 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated, isSignUp = fal
 };
 
 export default AuthScreen; 
+
+

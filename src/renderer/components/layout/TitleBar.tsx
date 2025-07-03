@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react'
+import { useState, useEffect } from 'react';
+import type { FC } from 'react';
 import { Settings, Minimize, Square, X, Bell, User, RefreshCw } from 'lucide-react';
 
 interface TitleBarProps {
@@ -7,12 +9,12 @@ interface TitleBarProps {
   currentUser?: string;
 }
 
-const TitleBar: React.FC<TitleBarProps> = ({ onSettingsClick, onDebugRefresh, currentUser }) => {
+const TitleBar: FC<TitleBarProps> = ({ onSettingsClick, onDebugRefresh, currentUser }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [showDebugTools, setShowDebugTools] = useState(false);
 
   // Show debug tools with Ctrl+Shift+D
-  React.useEffect(() => {
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.ctrlKey && event.shiftKey && event.key === 'D') {
         setShowDebugTools(prev => !prev);
@@ -128,3 +130,4 @@ const TitleBar: React.FC<TitleBarProps> = ({ onSettingsClick, onDebugRefresh, cu
 };
 
 export default TitleBar; 
+

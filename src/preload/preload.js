@@ -33,7 +33,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Pages
   getPages: (chapterId) => ipcRenderer.invoke('get-pages', chapterId),
-  getPage: (pageId) => ipcRenderer.invoke('get-page-content', pageId),
+  getPage: (pageId) => ipcRenderer.invoke('get-page', pageId),
+  getPageContent: (pageId) => ipcRenderer.invoke('get-page-content', pageId),
   createPage: (data) => ipcRenderer.invoke('create-page', data),
   updatePageContent: (pageId, content, contentText) => 
     ipcRenderer.invoke('update-page-content', pageId, content, contentText),

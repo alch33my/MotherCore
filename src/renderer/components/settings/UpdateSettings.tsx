@@ -1,3 +1,4 @@
+import React from 'react'
 import { useState, useEffect } from 'react'
 import { AlertTriangle, Shield, RefreshCw, Download, CheckCircle } from 'lucide-react'
 

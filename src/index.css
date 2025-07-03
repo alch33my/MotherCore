@@ -3,6 +3,29 @@
 @tailwind components;
 @tailwind utilities;
 
+/* CSS Custom Properties for Dynamic Theming */
+:root {
+  /* Theme colors - dynamically set by useTheme hook */
+  --color-primary: #ffd700;
+  --color-secondary: #ffb000;
+  --color-accent: #fff700;
+  --color-background: #0a0a0a;
+  --color-surface: rgba(0, 0, 0, 0.95);
+  --color-text: #ffb000;
+  --color-text-secondary: rgba(255, 215, 0, 0.7);
+  --color-border: rgba(255, 215, 0, 0.3);
+  --color-success: #00ff41;
+  --color-warning: #ff8c00;
+  --color-error: #ff4444;
+  
+  /* Legacy matrix variables for compatibility */
+  --matrix-black: var(--color-background);
+  --matrix-green: var(--color-success);
+  --matrix-gold: var(--color-primary);
+  --matrix-amber: var(--color-secondary);
+  --matrix-dark-green: #003311;
+}
+
 /* CSS Reset and Base Styles */
 * {
   margin: 0;
@@ -18,8 +41,8 @@ html, body, #root {
 
 body {
   font-family: 'Fira Code', monospace;
-  background: #0a0a0a;
-  color: #ffb000;
+  background: var(--color-background);
+  color: var(--color-text);
   user-select: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -31,22 +54,22 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255, 215, 0, 0.1);
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 215, 0, 0.3);
+  background: color-mix(in srgb, var(--color-primary) 30%, transparent);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 215, 0, 0.5);
+  background: color-mix(in srgb, var(--color-primary) 50%, transparent);
 }
 
 /* Selection colors */
 ::selection {
-  background: rgba(255, 215, 0, 0.3);
+  background: color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 
 /* Remove default button styles */
@@ -67,7 +90,7 @@ input, textarea {
   height: 100vh;
   width: 100vw;
   position: relative;
-  background: #0a0a0a;
+  background: var(--color-background);
   overflow: hidden;
 }
 
@@ -93,17 +116,17 @@ input, textarea {
 .sidebar {
   width: 320px;
   height: 75vh; /* 75% of viewport height for floating effect */
-  margin-top: 12vh; /* Top padding for floating effect */
-  margin-bottom: 13vh; /* Bottom padding for floating effect */
+  margin: 12vh 20px 13vh 20px; /* Floating margins on all sides */
   background: rgba(0, 0, 0, 0.95); /* Slightly more opaque for distinction */
-  border: 1px solid rgba(255, 215, 0, 0.3); /* Full border instead of just right */
-  border-radius: 0 12px 12px 0; /* Rounded right corners for floating effect */
+  border: 1px solid rgba(255, 215, 0, 0.3); /* Full border for floating effect */
+  border-radius: 12px; /* Rounded corners for floating effect */
   backdrop-filter: blur(15px); /* Increased blur for floating effect */
   display: flex;
   flex-direction: column;
   box-shadow: 4px 0 20px rgba(0, 0, 0, 0.4); /* Shadow for depth */
   position: relative;
   z-index: 10;
+  overflow: hidden; /* Constrain child elements */
 }
 
 .main-content {
@@ -112,6 +135,8 @@ input, textarea {
   flex-direction: column;
   height: calc(100vh - 48px); /* Account for fixed title bar */
   margin-top: 48px; /* Account for fixed title bar */
+  margin-right: 20px; /* Right margin for consistency */
+  margin-bottom: 80px; /* Bottom margin for floating effect */
   background: transparent; /* Transparent for matrix rain visibility */
   position: relative;
   z-index: 1;
@@ -166,32 +191,130 @@ input, textarea {
 }
 
 .sidebar-header {
-  padding: 16px; /* Reduced from 20px since no branding */
+  padding: 16px;
   border-bottom: 1px solid rgba(255, 215, 0, 0.3);
-  background: rgba(0, 0, 0, 0.1); /* Subtle distinction */
+  background: rgba(0, 0, 0, 0.1);
+  flex-shrink: 0; /* Prevent shrinking */
 }
 
 .sidebar-content {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
+  max-width: 100%; /* Constrain width */
+}
+
+/* Universal CSS classes using custom properties */
+.text-primary { color: var(--color-primary) !important; }
+.text-secondary { color: var(--color-secondary) !important; }
+.text-text { color: var(--color-text) !important; }
+.text-text-secondary { color: var(--color-text-secondary) !important; }
+.text-success { color: var(--color-success) !important; }
+.text-warning { color: var(--color-warning) !important; }
+.text-error { color: var(--color-error) !important; }
+
+.bg-primary { background-color: var(--color-primary) !important; }
+.bg-surface { background-color: var(--color-surface) !important; }
+.bg-background { background-color: var(--color-background) !important; }
+
+.border-primary { border-color: var(--color-primary) !important; }
+.border-border { border-color: var(--color-border) !important; }
+
+.settings-section {
+  margin-bottom: 32px;
+  padding: 24px;
+  margin-bottom: 40px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+/* Sidebar specific components */
+.sidebar-search {
+  position: relative;
+  margin-bottom: 16px;
+  width: 100%;
+}
+
+.sidebar-search .search-icon {
+  position: absolute;
+  left: 2px;
+  top: 50px;
+  color: color-mix(in srgb, var(--color-primary) 50%, transparent);
+  z-index: 2;
+}
+
+.sidebar-search input {
+  width: 100%;
+  padding: 12px 12px 12px 44px; /* Left padding for icon */
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  color: var(--color-text);
+  font-size: 14px;
+  font-family: 'Fira Code', monospace;
+}
+
+.sidebar-search input::placeholder {
+  color: var(--color-text-secondary);
+}
+
+.sidebar-search input:focus {
+  border-color: var(--color-primary);
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+.sidebar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+  width: 100%;
+}
+
+.sidebar-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  color: var(--color-primary);
+  font-size: 14px;
+  font-family: 'Fira Code', monospace;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.sidebar-action-btn:hover {
+  background: color-mix(in srgb, var(--color-primary) 20%, transparent);
+  border-color: color-mix(in srgb, var(--color-primary) 50%, transparent);
 }
 
 .sidebar-footer {
   padding: 16px;
   border-top: 1px solid rgba(255, 215, 0, 0.3);
+  flex-shrink: 0; /* Prevent shrinking */
 }
 
 /* Tree navigation styles */
+.tree-item-container {
+  margin-bottom: 2px;
+}
+
 .tree-item {
   display: flex;
   align-items: center;
-  padding: 8px 12px;
+  padding: 6px 8px;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
-  margin-bottom: 2px;
   position: relative;
+  min-height: 32px;
 }
 
 .tree-item:hover {
@@ -207,50 +330,114 @@ input, textarea {
   background: rgba(255, 215, 0, 0.05);
 }
 
+.tree-item-chevron {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 4px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+  color: rgba(255, 215, 0, 0.7);
+}
+
+.tree-item-chevron:hover {
+  background: rgba(255, 215, 0, 0.1);
+  color: rgba(255, 215, 0, 1);
+}
+
+.tree-loading {
+  animation: spin 1s linear infinite;
+  color: rgba(255, 215, 0, 0.8);
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.tree-item-content {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 8px;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.tree-item-content:hover {
+  color: rgba(255, 215, 0, 1);
+}
+
 .tree-item-icon {
+  flex-shrink: 0;
   width: 16px;
   height: 16px;
-  margin-right: 8px;
-  color: #ffd700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tree-item-text {
   flex: 1;
-  font-size: 14px;
-  color: #ffb000;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 215, 0, 0.9);
 }
 
-.tree-item-chevron {
-  width: 16px;
-  height: 16px;
-  color: #ffd700;
-  margin-right: 4px;
-  transition: transform 0.2s;
-}
-
-.tree-item-chevron.expanded {
-  transform: rotate(90deg);
-}
-
-.tree-item-add {
-  width: 16px;
-  height: 16px;
-  color: #ffd700;
+.tree-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   opacity: 0;
   transition: opacity 0.2s;
 }
 
-.tree-item:hover .tree-item-add {
+.tree-item:hover .tree-item-actions {
   opacity: 1;
 }
 
+.tree-action-btn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+.tree-action-btn.add-btn {
+  color: rgba(34, 197, 94, 0.7);
+}
+
+.tree-action-btn.add-btn:hover {
+  background: rgba(34, 197, 94, 0.1);
+  color: rgba(34, 197, 94, 1);
+}
+
+.tree-action-btn.debug-btn {
+  color: rgba(255, 215, 0, 0.5);
+}
+
+.tree-action-btn.debug-btn:hover {
+  background: rgba(255, 215, 0, 0.1);
+  color: rgba(255, 215, 0, 1);
+}
+
 .tree-children {
+  padding-left: 0;
+  border-left: 1px solid rgba(255, 215, 0, 0.1);
   margin-left: 20px;
-  border-left: 1px solid rgba(255, 215, 0, 0.2);
-  padding-left: 8px;
 }
 
 /* Content panels with proper transparency */
@@ -306,32 +493,43 @@ input, textarea {
 }
 
 .btn {
-  padding: 8px 16px;
+  padding: 12px 20px;
   border-radius: 6px;
   font-size: 14px;
   font-weight: 500;
   transition: all 0.2s;
   cursor: pointer;
   border: none;
+  font-family: 'Fira Code', monospace;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .btn-primary {
   background: #ffd700;
   color: #000;
+  border: 1px solid #ffd700;
 }
 
 .btn-primary:hover {
   background: #ffed4e;
   transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 .btn-secondary {
-  background: #666;
-  color: #fff;
+  background: rgba(255, 215, 0, 0.1);
+  color: #ffd700;
+  border: 1px solid rgba(255, 215, 0, 0.3);
 }
 
 .btn-secondary:hover {
-  background: #777;
+  background: rgba(255, 215, 0, 0.2);
+  border-color: rgba(255, 215, 0, 0.5);
 }
 
 /* Content area styles */
@@ -573,14 +771,20 @@ input, textarea {
 
 /* Status bar */
 .status-bar {
-  height: 32px;
-  background-color: rgba(10, 10, 10, 0.9);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 24px;
+  background: rgba(0, 0, 0, 0.9);
   border-top: 1px solid rgba(255, 215, 0, 0.3);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
-  z-index: 1;
+  font-size: 11px;
+  color: rgba(255, 215, 0, 0.7);
+  z-index: 100;
 }
 
 /* Responsive adjustments */

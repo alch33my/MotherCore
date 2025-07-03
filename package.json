@@ -10,9 +10,9 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "start": "electron .",
-    "electron:dev": "npm run build:preload && concurrently \"vite\" \"npm run electron:start\"",
-    "electron:build": "vite build && electron-builder",
-    "electron:start": "wait-on tcp:5173 && electron ."
+    "electron:dev": "npm run electron:build && npm run electron:start",
+    "electron:build": "npm run build:preload && tsc -b && vite build",
+    "electron:start": "electron ."
   },
   "dependencies": {
     "@types/bcrypt": "^5.0.2",

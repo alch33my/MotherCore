@@ -10,15 +10,14 @@ Transform MotherCores Main Content area into a comprehensive note-taking environ
 ┌─────────────────────────────────────────────────────────────────────┐
 │ MOTHERCORE - Knowledge Repository            [All Current UI Stays] │
 ├─────────────┬─────────────────────────────────────┬─────────────────┤
-│ Sidebar     │ Main Editor Area                    │ Right Panel     │
-│ (300px)     │ (Flexible)                          │ (320px)         │
-│             │                                     │                 │
-│ [Explorer]  │ ┌─────────────────────────────────┐ │                 │
-│ [Search]    │ │ Tab: Chapter1.md    [×]         │ │                 │
-│ [Git]       │ │ Tab: script.js      [×]         │ │                 │
-│ [Extensions]│ │ Tab: data.csv       [×]         │ │ [AI Assistant]  │
-│             │ ├─────────────────────────────────┤ │                 │
-│             │ │     ACTIVE EDITOR       | Live  │ │     Terminal    │
+│ Sidebar     │ |   Main Editor Area      |       | │ Right Panel     │
+│             │ |                         |       | │                 │
+│ [Explorer]  │ |                         |       | │                 │
+│ [Search]    │ |                         |       | │                 │
+│ [Git]       │ |                         |       | │                 │
+│ [Extensions]│ |                         |       | │ [AI Assistant]  │
+│             │ ├                         |       | │                 │
+│             │ │                         | Live  │ │     Terminal    │
 │             │ │                         |Preview│ │                 │
 │             │ │                         |  If   │ │                 │
 │             │ |                         | Code  | │                 │

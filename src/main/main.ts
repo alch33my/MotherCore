@@ -1,11 +1,9 @@
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
 import { fileURLToPath } from 'url'
 import path from 'path'
-import fs from 'fs/promises'
-import DatabaseManager from './database'
-import { v4 as uuidv4 } from 'uuid'
 import bcryptjs from 'bcryptjs'
-import SecureUpdateManager from './update-manager'
+import DatabaseManager from './database'
+import { SecureUpdateManager } from './update-manager'
 
 // Workaround for __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url)
@@ -45,10 +43,13 @@ function createWindow() {
 
   // Load the app - use VITE_DEV_SERVER_URL in dev, file:// in production
   if (!app.isPackaged && process.env['VITE_DEV_SERVER_URL']) {
+    console.log('Loading from dev server URL:', process.env['VITE_DEV_SERVER_URL'])
     mainWindow.loadURL(process.env['VITE_DEV_SERVER_URL'])
   } else {
     // Load the index.html from the dist folder
-    mainWindow.loadFile(path.join(__dirname, '../../index.html'))
+    const indexPath = path.join(__dirname, '../../dist/index.html')
+    console.log('Loading index.html from:', indexPath)
+    mainWindow.loadFile(indexPath)
   }
 
   // Set up IPC handlers for window controls
@@ -79,6 +80,10 @@ function createWindow() {
 function initializeDatabase() {
   try {
     dbManager = new DatabaseManager()
+    
+    // Fix any database integrity issues
+    dbManager.fixDatabaseIntegrity()
+    
     console.log('Database initialized successfully')
   } catch (err) {
     console.error('Failed to initialize database:', err)
@@ -196,7 +201,7 @@ function setupIpcHandlers() {
   
   ipcMain.handle('install-update', async (_, userApproved) => {
     try {
-      const result = await updateManager.installUpdate('', userApproved)
+      const result = await updateManager.installUpdate(userApproved)
       return { success: result }
     } catch (err) {
       console.error('Error installing update:', err)
@@ -217,8 +222,13 @@ function setupIpcHandlers() {
 
   ipcMain.handle('create-organization', async (_, data) => {
     try {
-      const result = dbManager.createOrganization(data)
-      return { success: true, id: result.lastInsertRowid }
+      // Generate a unique ID for the organization
+      const orgData = {
+        ...data,
+        id: `org_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      }
+      const result = dbManager.createOrganization(orgData)
+      return { success: true, organization: result }
     } catch (err) {
       console.error('Error creating organization:', err)
       return { success: false, error: 'Failed to create organization' }
@@ -238,8 +248,13 @@ function setupIpcHandlers() {
 
   ipcMain.handle('create-project', async (_, data) => {
     try {
-      const result = dbManager.createProject(data)
-      return { success: true, id: result.lastInsertRowid }
+      // Generate a unique ID for the project
+      const projectData = {
+        ...data,
+        id: `proj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      }
+      const result = dbManager.createProject(projectData)
+      return { success: true, project: result }
     } catch (err) {
       console.error('Error creating project:', err)
       return { success: false, error: 'Failed to create project' }
@@ -259,8 +274,13 @@ function setupIpcHandlers() {
 
   ipcMain.handle('create-book', async (_, data) => {
     try {
-      const result = dbManager.createBook(data)
-      return { success: true, id: result.lastInsertRowid }
+      // Generate a unique ID for the book
+      const bookData = {
+        ...data,
+        id: `book_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      }
+      const result = dbManager.createBook(bookData)
+      return { success: true, book: result }
     } catch (err) {
       console.error('Error creating book:', err)
       return { success: false, error: 'Failed to create book' }
@@ -280,8 +300,13 @@ function setupIpcHandlers() {
 
   ipcMain.handle('create-chapter', async (_, data) => {
     try {
-      const result = dbManager.createChapter(data)
-      return { success: true, id: result.lastInsertRowid }
+      // Generate a unique ID for the chapter
+      const chapterData = {
+        ...data,
+        id: `ch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      }
+      const result = dbManager.createChapter(chapterData)
+      return { success: true, chapter: result }
     } catch (err) {
       console.error('Error creating chapter:', err)
       return { success: false, error: 'Failed to create chapter' }
@@ -299,10 +324,20 @@ function setupIpcHandlers() {
     }
   })
 
-  ipcMain.handle('get-page-content', async (_, pageId) => {
+  ipcMain.handle('get-page', async (_, pageId) => {
     try {
       const page = dbManager.getPage(pageId)
       return { success: true, page }
+    } catch (err) {
+      console.error('Error getting page:', err)
+      return { success: false, error: 'Failed to get page' }
+    }
+  })
+
+  ipcMain.handle('get-page-content', async (_, pageId) => {
+    try {
+      const page = dbManager.getPage(pageId)
+      return { success: true, content: page?.content || '', page }
     } catch (err) {
       console.error('Error getting page content:', err)
       return { success: false, error: 'Failed to get page content' }
@@ -311,8 +346,13 @@ function setupIpcHandlers() {
 
   ipcMain.handle('create-page', async (_, data) => {
     try {
-      const result = dbManager.createPage(data)
-      return { success: true, id: result.lastInsertRowid }
+      // Generate a unique ID for the page
+      const pageData = {
+        ...data,
+        id: `page_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      }
+      const result = dbManager.createPage(pageData)
+      return { success: true, page: result }
     } catch (err) {
       console.error('Error creating page:', err)
       return { success: false, error: 'Failed to create page' }
@@ -332,26 +372,6 @@ function setupIpcHandlers() {
   // System operations
   ipcMain.handle('log-error', (_, errorMessage) => {
     console.error('Client error:', errorMessage)
-    return true
-  })
-
-  // Window control handlers
-  ipcMain.handle('window-minimize', () => {
-    mainWindow?.minimize()
-    return true
-  })
-
-  ipcMain.handle('window-maximize', () => {
-    if (mainWindow?.isMaximized()) {
-      mainWindow?.unmaximize()
-    } else {
-      mainWindow?.maximize()
-    }
-    return mainWindow?.isMaximized()
-  })
-
-  ipcMain.handle('window-close', () => {
-    mainWindow?.close()
     return true
   })
 
