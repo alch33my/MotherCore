@@ -3,55 +3,57 @@ const { contextBridge, ipcRenderer } = require('electron')
 // Debug logging to help track preload script loading
 console.log('Preload script is running')
 
-// Define the electronAPI object
-const electronAPI = {
-  // Window control methods
-  minimizeWindow: () => ipcRenderer.invoke('minimizeWindow'),
-  maximizeWindow: () => ipcRenderer.invoke('maximizeWindow'),
-  closeWindow: () => ipcRenderer.invoke('closeWindow'),
+// Expose the electronAPI to the renderer process
+contextBridge.exposeInMainWorld('electronAPI', {
+  // Window controls
+  minimizeWindow: () => ipcRenderer.invoke('window-minimize'),
+  maximizeWindow: () => ipcRenderer.invoke('window-maximize'),
+  closeWindow: () => ipcRenderer.invoke('window-close'),
   
-  // Authentication methods
+  // Authentication
   checkAuthStatus: () => ipcRenderer.invoke('check-auth-status'),
   setupAuth: (password) => ipcRenderer.invoke('setup-auth', password),
   authenticate: (password) => ipcRenderer.invoke('authenticate', password),
   
-  // Organization methods
-  createOrganization: (data) => ipcRenderer.invoke('create-organization', data),
+  // Organizations
   getOrganizations: () => ipcRenderer.invoke('get-organizations'),
+  createOrganization: (data) => ipcRenderer.invoke('create-organization', data),
   
-  // Project methods
+  // Projects
+  getProjects: (orgId) => ipcRenderer.invoke('get-projects', orgId),
   createProject: (data) => ipcRenderer.invoke('create-project', data),
-  getProjects: (organizationId) => ipcRenderer.invoke('get-projects', organizationId),
   
-  // Book methods
-  createBook: (data) => ipcRenderer.invoke('create-book', data),
+  // Books
   getBooks: (projectId) => ipcRenderer.invoke('get-books', projectId),
+  createBook: (data) => ipcRenderer.invoke('create-book', data),
   
-  // Chapter methods
-  createChapter: (data) => ipcRenderer.invoke('create-chapter', data),
+  // Chapters
   getChapters: (bookId) => ipcRenderer.invoke('get-chapters', bookId),
+  createChapter: (data) => ipcRenderer.invoke('create-chapter', data),
   
-  // Page methods
-  createPage: (data) => ipcRenderer.invoke('create-page', data),
+  // Pages
   getPages: (chapterId) => ipcRenderer.invoke('get-pages', chapterId),
-  getPageContent: (pageId) => ipcRenderer.invoke('get-page-content', pageId),
-  updatePageContent: (pageId, content, plainText) => 
-    ipcRenderer.invoke('update-page-content', pageId, content, plainText),
+  getPage: (pageId) => ipcRenderer.invoke('get-page-content', pageId),
+  createPage: (data) => ipcRenderer.invoke('create-page', data),
+  updatePageContent: (pageId, content, contentText) => 
+    ipcRenderer.invoke('update-page-content', pageId, content, contentText),
   
-  // File system methods
-  selectDirectory: () => ipcRenderer.invoke('select-directory'),
+  // Updates
+  getUpdateSettings: () => ipcRenderer.invoke('get-update-settings'),
+  saveUpdateSettings: (settings) => ipcRenderer.invoke('save-update-settings', settings),
+  checkForUpdates: (userRequested = true) => ipcRenderer.invoke('check-for-updates', userRequested),
+  downloadUpdate: (updateInfo) => ipcRenderer.invoke('download-update', updateInfo),
+  installUpdate: (userApproved) => ipcRenderer.invoke('install-update', userApproved),
   
-  // Logging and error handling
-  logError: (error) => ipcRenderer.send('log-error', error),
+  // File system dialogs
+  openFileDialog: (options) => ipcRenderer.invoke('open-file-dialog', options),
+  saveFileDialog: (options) => ipcRenderer.invoke('save-file-dialog', options),
   
-  // Debug methods
-  refreshDatabase: () => ipcRenderer.invoke('refresh-database'),
-  logOrganizationProjects: (orgId) => ipcRenderer.invoke('log-organization-projects', orgId),
+  // External links
+  openExternalUrl: (url) => ipcRenderer.invoke('open-external-url', url),
   
-  // Utility to check if the API is available
-  isElectronAPIAvailable: () => true
-}
+  // Error logging
+  logError: (errorMessage) => ipcRenderer.invoke('log-error', errorMessage)
+})
 
-// Expose the API to the renderer process
-contextBridge.exposeInMainWorld('electronAPI', electronAPI)
 console.log('Electron API exposed successfully') 

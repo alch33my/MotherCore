@@ -1,97 +1,110 @@
-import { useState, useEffect } from 'react'
-import { BookOpen, Folder, LayoutGrid, FileText, PlusIcon } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { PlusIcon, RefreshCwIcon } from 'lucide-react'
 import PageEditor from './page-editor'
 
 // Import the ContentType from App.tsx or define it here
 type ContentType = 'organization' | 'project' | 'book' | 'chapter' | 'page' | null
 
 interface ContentContainerProps {
-  selectedType?: ContentType
-  selectedId?: string | null
-  setSelectedType: React.Dispatch<React.SetStateAction<ContentType>>
-  setSelectedId: React.Dispatch<React.SetStateAction<string | null>>
+  selectedType: string
+  selectedId: string | null
+  setSelectedType: (type: string) => void
+  setSelectedId: (id: string | null) => void
   onEditorStatsChange?: (stats: { words: number, characters: number }) => void
+  onCreatePage?: (chapterId: string) => void
+  onRefreshContent?: () => void
 }
 
-function ContentContainer({ selectedType, selectedId, setSelectedType, setSelectedId, onEditorStatsChange }: ContentContainerProps) {
-  const [contentData, setContentData] = useState<any>(null)
+interface ContentData {
+  type: string
+  id: string
+  pageId?: string
+  title?: string
+  content?: any
+  items?: any[]
+}
+
+function ContentContainer({ 
+  selectedType, 
+  selectedId, 
+  setSelectedType, 
+  setSelectedId, 
+  onEditorStatsChange,
+  onCreatePage,
+  onRefreshContent
+}: ContentContainerProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  
+  const [contentData, setContentData] = useState<ContentData | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
+
   useEffect(() => {
     if (selectedId && selectedType) {
       loadContent()
     } else {
       setContentData(null)
     }
-  }, [selectedId, selectedType])
-  
+  }, [selectedId, selectedType, refreshKey])
+
+  async function refreshContent() {
+    setRefreshKey(prev => prev + 1)
+    if (onRefreshContent) {
+      onRefreshContent()
+    }
+  }
+
   async function loadContent() {
-    if (!selectedId || !selectedType) return
-    if (!window.electronAPI) {
-      setError('Application error: API not available')
+    if (!window.electronAPI || !selectedId) {
       return
     }
-    
+
     setLoading(true)
     setError('')
-    
+
     try {
+      // Load content based on selectedType
       switch (selectedType) {
-        case 'organization':
-          const orgResult = await window.electronAPI.getProjects(selectedId)
-          if (orgResult.success) {
+        case 'page': {
+          const result = await window.electronAPI.getPageContent(selectedId)
+          if (result.success) {
             setContentData({
-              type: 'organization',
-              projects: orgResult.projects || [],
+              type: 'page',
+              id: selectedId,
+              pageId: selectedId,
+              content: result.content
             })
           } else {
-            setError(orgResult.error || 'Failed to load organization data')
+            setError(result.error || 'Failed to load page content')
           }
           break
-          
-        case 'project':
-          const projectResult = await window.electronAPI.getBooks(selectedId)
-          if (projectResult.success) {
-            setContentData({
-              type: 'project',
-              books: projectResult.books || [],
-            })
-          } else {
-            setError(projectResult.error || 'Failed to load project data')
-          }
-          break
-          
-        case 'book':
-          const bookResult = await window.electronAPI.getChapters(selectedId)
-          if (bookResult.success) {
-            setContentData({
-              type: 'book',
-              chapters: bookResult.chapters || [],
-            })
-          } else {
-            setError(bookResult.error || 'Failed to load book data')
-          }
-          break
-          
-        case 'chapter':
-          const chapterResult = await window.electronAPI.getPages(selectedId)
-          if (chapterResult.success) {
+        }
+        case 'chapter': {
+          const result = await window.electronAPI.getPages(selectedId)
+          if (result.success) {
             setContentData({
               type: 'chapter',
-              pages: chapterResult.pages || [],
+              id: selectedId,
+              items: result.pages || []
             })
           } else {
-            setError(chapterResult.error || 'Failed to load chapter data')
+            setError(result.error || 'Failed to load pages')
           }
           break
-          
-        case 'page':
-          setContentData({
-            type: 'page',
-            pageId: selectedId
-          })
+        }
+        case 'book': {
+          const result = await window.electronAPI.getChapters(selectedId)
+          if (result.success) {
+            setContentData({
+              type: 'book',
+              id: selectedId,
+              items: result.chapters || []
+            })
+          } else {
+            setError(result.error || 'Failed to load chapters')
+          }
           break
+        }
+        // Add more cases for other content types if needed
       }
     } catch (err) {
       console.error('Failed to load content:', err)
@@ -102,190 +115,94 @@ function ContentContainer({ selectedType, selectedId, setSelectedType, setSelect
     }
   }
 
-  // Render welcome screen when nothing is selected
-  if (!selectedType || !selectedId) {
+  const handleCreatePage = () => {
+    if (onCreatePage && selectedId && selectedType === 'chapter') {
+      onCreatePage(selectedId)
+    }
+  }
+
+  if (loading) {
     return (
-      <div className="p-6">
-        <h2 className="text-3xl font-bold text-white mb-6">Welcome to MotherCore</h2>
-        
-        <div className="bg-matrix-dark-gray bg-opacity-80 border border-matrix-gold border-opacity-50 p-6 rounded-lg shadow-lg">
-          <h3 className="text-xl text-amber mb-4">Your Digital Knowledge Library</h3>
-          <p className="text-white mb-4">
-            Select an item from the navigation tree to view its contents, or create a new organization to get started.
-          </p>
-          
-          <div className="grid grid-cols-3 gap-6 mt-8">
-            <div className="bg-matrix-black bg-opacity-70 p-4 rounded-lg border border-matrix-gold border-opacity-30 shadow-md">
-              <Folder className="text-amber mb-2" size={24} />
-              <h4 className="text-gold mb-1">Organizations</h4>
-              <p className="text-white text-sm">
-                Create organizations to group related projects
-              </p>
-            </div>
-            
-            <div className="bg-matrix-black bg-opacity-70 p-4 rounded-lg border border-matrix-gold border-opacity-30 shadow-md">
-              <LayoutGrid className="text-amber mb-2" size={24} />
-              <h4 className="text-gold mb-1">Projects</h4>
-              <p className="text-white text-sm">
-                Organize your work into specific projects
-              </p>
-            </div>
-            
-            <div className="bg-matrix-black bg-opacity-70 p-4 rounded-lg border border-matrix-gold border-opacity-30 shadow-md">
-              <BookOpen className="text-amber mb-2" size={24} />
-              <h4 className="text-gold mb-1">Books & Chapters</h4>
-              <p className="text-white text-sm">
-                Store your knowledge in books and chapters
-              </p>
-            </div>
-          </div>
+      <div className="flex items-center justify-center w-full h-full bg-matrix-black bg-opacity-60 text-matrix-amber p-8">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-matrix-gold mb-4"></div>
+          <p>Loading content...</p>
         </div>
       </div>
     )
   }
-  
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-full">
-        <p className="text-white">Loading content...</p>
-      </div>
-    )
-  }
-  
+
   if (error) {
     return (
-      <div className="p-6">
-        <div className="bg-matrix-dark-gray border border-matrix-error border-opacity-50 p-4 rounded-lg">
-          <p className="text-matrix-error">{error}</p>
+      <div className="w-full h-full bg-matrix-black bg-opacity-60 text-matrix-amber p-8">
+        <div className="bg-matrix-error bg-opacity-10 border border-matrix-error border-opacity-30 rounded-lg p-6 flex flex-col items-center">
+          <div className="text-matrix-error text-xl mb-4">Error Loading Content</div>
+          <p className="text-matrix-error mb-6">{error}</p>
           <button 
-            onClick={loadContent}
-            className="mt-2 px-4 py-1 bg-matrix-error bg-opacity-20 text-matrix-error rounded"
+            className="px-4 py-2 bg-matrix-gold bg-opacity-20 hover:bg-opacity-30 text-matrix-gold rounded flex items-center"
+            onClick={refreshContent}
           >
-            Retry
+            <RefreshCwIcon size={16} className="mr-2" />
+            Try Again
           </button>
         </div>
       </div>
     )
   }
-  
-  // Display content based on type
+
   return (
-    <div className="p-6">
-      {contentData?.type === 'organization' && (
-        <>
-          <h2 className="text-2xl font-bold text-white mb-6">Projects</h2>
-          
-          {contentData.projects.length > 0 ? (
-            <div className="grid grid-cols-2 gap-4">
-              {contentData.projects.map((project: any) => (
-                <div 
-                  key={project.id}
-                  className="bg-matrix-dark-gray bg-opacity-80 p-4 rounded-lg border border-matrix-gold border-opacity-30 hover:border-opacity-70 cursor-pointer shadow-md"
-                  style={{ borderLeftColor: project.color || '#ffb000', borderLeftWidth: '4px' }}
-                >
-                  <h3 className="text-matrix-amber text-lg mb-2">{project.name}</h3>
-                  {project.description && (
-                    <p className="text-white text-sm">{project.description}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-white opacity-70">No projects found in this organization.</p>
+    <div className="w-full h-full bg-matrix-black bg-opacity-60 overflow-auto">
+      <div className="flex justify-between items-center p-4 border-b border-matrix-gold border-opacity-30 bg-matrix-black bg-opacity-60">
+        <div>
+          <h2 className="text-white text-lg">
+            {selectedType === 'page' ? 'Page Content' : 
+             selectedType === 'chapter' ? 'Pages' : 
+             selectedType === 'book' ? 'Chapters' : 'Content'}
+          </h2>
+          {contentData && contentData.title && (
+            <p className="text-matrix-amber text-sm">{contentData.title}</p>
           )}
-        </>
-      )}
-      
-      {contentData?.type === 'project' && (
-        <>
-          <h2 className="text-2xl font-bold text-matrix-gold mb-6">Books</h2>
-          
-          {contentData.books.length > 0 ? (
-            <div className="grid grid-cols-4 gap-6">
-              {contentData.books.map((book: any) => (
-                <div 
-                  key={book.id}
-                  className="cursor-pointer"
-                >
-                  <div 
-                    className="h-40 rounded-md shadow-lg flex items-center justify-center"
-                    style={{ 
-                      backgroundColor: book.spine_color || '#ffd700',
-                      color: '#000',
-                      writingMode: 'vertical-lr',
-                      transform: 'rotate(180deg)',
-                      textOrientation: 'mixed'
-                    }}
-                  >
-                    <h3 className="text-lg font-bold px-2 truncate max-h-full">
-                      {book.name}
-                    </h3>
-                  </div>
-                  <div className="mt-2">
-                    <p className="text-matrix-green text-sm truncate">{book.name}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-matrix-green opacity-70">No books found in this project.</p>
+        </div>
+        <div className="flex items-center space-x-2">
+          {selectedType === 'chapter' && (
+            <button 
+              className="px-3 py-1 bg-matrix-gold bg-opacity-20 hover:bg-opacity-30 text-matrix-gold rounded flex items-center"
+              onClick={handleCreatePage}
+            >
+              <PlusIcon size={16} className="mr-1" />
+              New Page
+            </button>
           )}
-        </>
-      )}
-      
-      {contentData?.type === 'book' && (
-        <>
-          <h2 className="text-2xl font-bold text-matrix-gold mb-6">Chapters</h2>
-          
-          {contentData.chapters.length > 0 ? (
-            <div className="bg-matrix-dark-gray rounded-lg border border-matrix-green border-opacity-30 overflow-hidden">
-              {contentData.chapters.map((chapter: any, index: number) => (
-                <div 
-                  key={chapter.id}
-                  className={`p-4 hover:bg-matrix-black hover:bg-opacity-30 cursor-pointer ${
-                    index !== contentData.chapters.length - 1 ? 'border-b border-matrix-green border-opacity-20' : ''
-                  }`}
-                >
-                  <h3 className="text-matrix-green">
-                    <span className="text-matrix-amber mr-2">Chapter {index + 1}:</span>
-                    {chapter.name}
-                  </h3>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-matrix-green opacity-70">No chapters found in this book.</p>
-          )}
-        </>
-      )}
-      
+          <button
+            className="px-3 py-1 bg-matrix-amber bg-opacity-20 hover:bg-opacity-30 text-matrix-amber rounded flex items-center"
+            onClick={refreshContent}
+          >
+            <RefreshCwIcon size={16} className="mr-1" />
+            Refresh
+          </button>
+        </div>
+      </div>
+
       {contentData?.type === 'chapter' && (
         <>
-          <h2 className="text-2xl font-bold text-white mb-6">Pages</h2>
-          
-          {contentData.pages.length > 0 ? (
-            <div className="grid grid-cols-2 gap-4">
-              {contentData.pages.map((page: any) => (
-                <div 
+          {contentData.items && contentData.items.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+              {contentData.items.map((page) => (
+                <div
                   key={page.id}
-                  className="bg-matrix-dark-gray bg-opacity-80 p-4 rounded-lg border border-matrix-gold border-opacity-30 hover:border-opacity-70 cursor-pointer shadow-md"
+                  className="bg-matrix-black bg-opacity-70 border border-matrix-gold border-opacity-20 hover:border-opacity-40 rounded-lg p-4 cursor-pointer transition-all duration-200 hover:transform hover:-translate-y-1"
                   onClick={() => {
-                    if (window.electronAPI) {
-                      // Update selected type and ID in parent component
-                      setSelectedType('page');
-                      setSelectedId(page.id);
-                    }
+                    setSelectedType('page')
+                    setSelectedId(page.id)
                   }}
                 >
-                  <h3 className="text-white text-lg mb-2 flex items-center">
-                    <FileText size={16} className="text-matrix-amber mr-2" />
-                    {page.title}
-                  </h3>
-                  {page.page_type && (
-                    <p className="text-matrix-amber text-sm">
-                      Type: {page.page_type}
-                    </p>
-                  )}
+                  <h3 className="text-matrix-gold text-lg mb-2">{page.title}</h3>
+                  <div className="flex justify-between text-xs text-matrix-amber opacity-70">
+                    <span>Type: {page.page_type || 'note'}</span>
+                    <span>
+                      {new Date(page.updated_at).toLocaleDateString()}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -294,12 +211,7 @@ function ContentContainer({ selectedType, selectedId, setSelectedType, setSelect
               <p className="text-white opacity-70 mb-4">No pages found in this chapter.</p>
               <button 
                 className="px-4 py-2 bg-matrix-gold bg-opacity-20 hover:bg-opacity-30 text-matrix-gold rounded flex items-center"
-                onClick={() => {
-                  if (selectedId && window.electronAPI) {
-                    // Call a function passed from parent to create a new page
-                    // This would need to be added to props
-                  }
-                }}
+                onClick={handleCreatePage}
               >
                 <PlusIcon size={16} className="mr-1" />
                 Create a page
@@ -312,7 +224,7 @@ function ContentContainer({ selectedType, selectedId, setSelectedType, setSelect
       {contentData?.type === 'page' && (
         <div className="h-full">
           <PageEditor 
-            pageId={contentData.pageId} 
+            pageId={contentData.pageId!} 
             onStatsChange={onEditorStatsChange}
           />
         </div>

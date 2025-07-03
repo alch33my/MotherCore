@@ -47,7 +47,7 @@ interface Page {
   id: string
   chapter_id: string
   title: string
-  content?: any
+  content?: string
   content_text?: string
   page_type?: string
   tags?: string
@@ -61,23 +61,39 @@ interface AuthCredentials {
   created_at: string
 }
 
+interface AppSetting {
+  id: number
+  category: string
+  key: string
+  value: string
+  created_at: string
+  updated_at: string
+}
+
 class DatabaseManager {
-  private db: Database.Database
-  private static instance: DatabaseManager | null = null
+  private db: any
+  private dbPath: string
 
-  private constructor() {
-    const userDataPath = app.getPath('userData')
-    const dbPath = path.join(userDataPath, 'mothercore.db')
+  constructor(dbPath?: string) {
+    // Default path is in the userData directory
+    this.dbPath = dbPath || path.join(app.getPath('userData'), 'mothercore.db')
     
-    this.db = new Database(dbPath, { verbose: console.log })
-    this.initializeTables()
-  }
-
-  public static getInstance(): DatabaseManager {
-    if (!DatabaseManager.instance) {
-      DatabaseManager.instance = new DatabaseManager()
+    console.log(`Using database at: ${this.dbPath}`)
+    
+    // Create directory if it doesn't exist
+    const dir = path.dirname(this.dbPath)
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true })
     }
-    return DatabaseManager.instance
+    
+    // Initialize database
+    this.db = new Database(this.dbPath)
+    
+    // Enable foreign keys
+    this.db.pragma('foreign_keys = ON')
+    
+    // Create tables if they don't exist
+    this.initializeTables()
   }
 
   private initializeTables() {
@@ -174,6 +190,30 @@ class DatabaseManager {
         FOREIGN KEY(page_id) REFERENCES pages(id)
       )
     `).run()
+
+    // App settings table
+    this.db.prepare(`
+      CREATE TABLE IF NOT EXISTS app_settings (
+        id INTEGER PRIMARY KEY,
+        category TEXT NOT NULL,
+        key TEXT NOT NULL,
+        value TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(category, key)
+      )
+    `).run()
+
+    // Insert default update settings
+    this.db.prepare(`
+      INSERT OR IGNORE INTO app_settings (category, key, value) VALUES
+      ('updates', 'autoCheck', 'false'),
+      ('updates', 'checkOnStartup', 'false'),
+      ('updates', 'requireApproval', 'true'),
+      ('updates', 'backupBeforeUpdate', 'true'),
+      ('updates', 'updateSource', 'manual'),
+      ('updates', 'trustedDomains', '[]')
+    `).run()
   }
 
   public saveAuthCredentials(passwordHash: string, salt: string) {
@@ -186,6 +226,42 @@ class DatabaseManager {
   public getAuthCredentials(): AuthCredentials | undefined {
     const stmt = this.db.prepare('SELECT * FROM auth ORDER BY created_at DESC LIMIT 1')
     return stmt.get() as AuthCredentials | undefined
+  }
+
+  // App settings methods
+  public getSetting(category: string, key: string): string | null {
+    const stmt = this.db.prepare('SELECT value FROM app_settings WHERE category = ? AND key = ?')
+    const result = stmt.get(category, key)
+    return result ? result.value : null
+  }
+
+  public getSettingsGroup(category: string): Record<string, string> {
+    const stmt = this.db.prepare('SELECT key, value FROM app_settings WHERE category = ?')
+    const rows = stmt.all(category) || []
+    
+    const settings: Record<string, string> = {}
+    rows.forEach((row: any) => {
+      settings[row.key] = row.value
+    })
+    
+    return settings
+  }
+
+  public updateSetting(category: string, key: string, value: string): boolean {
+    try {
+      const stmt = this.db.prepare(`
+        INSERT INTO app_settings (category, key, value, updated_at)
+        VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT (category, key) DO UPDATE SET
+          value = excluded.value,
+          updated_at = excluded.updated_at
+      `)
+      stmt.run(category, key, value)
+      return true
+    } catch (error) {
+      console.error(`Error updating setting ${category}.${key}:`, error)
+      return false
+    }
   }
 
   // Organization methods

@@ -11,8 +11,10 @@ import {
   Volume2,
   Bell,
   Keyboard,
-  Info
+  Info,
+  Settings
 } from 'lucide-react';
+import UpdateSettings from './UpdateSettings';
 
 interface MatrixSettings {
   intensity: number;
@@ -28,8 +30,10 @@ interface SettingsPageProps {
   onMatrixSettingsChange: (settings: MatrixSettings) => void;
 }
 
+type SettingsTab = 'profile' | 'appearance' | 'updates' | 'security' | 'data' | 'system' | 'about';
+
 const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, matrixSettings, onMatrixSettingsChange }) => {
-  const [activeTab, setActiveTab] = useState('appearance');
+  const [activeTab, setActiveTab] = useState<SettingsTab>('appearance');
   const [settings, setSettings] = useState({
     theme: 'cyberpunk',
     matrixSpeed: 50,
@@ -40,9 +44,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, matrixSettings, on
     backupLocation: '',
   });
 
-  const tabs = [
+  const tabs: { id: SettingsTab; label: string; icon: React.ElementType }[] = [
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'appearance', label: 'Appearance', icon: Palette },
+    { id: 'updates', label: 'Updates', icon: Download },
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'data', label: 'Data & Backup', icon: Database },
     { id: 'system', label: 'System', icon: Monitor },
@@ -172,16 +177,27 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, matrixSettings, on
           </div>
         );
 
+      case 'updates':
+        return (
+          <div className="settings-content">
+            <h3 className="settings-section-title">Updates</h3>
+            <div className="settings-grid">
+              <div className="setting-item">
+                <label className="setting-label">Update Settings</label>
+                <button className="setting-button">
+                  <Download className="w-4 h-4 mr-2" />
+                  Update
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+
       case 'security':
         return (
           <div className="settings-content">
             <h3 className="settings-section-title">Security Settings</h3>
             <div className="settings-grid">
-              <div className="setting-item">
-                <label className="setting-label">Change Master Password</label>
-                <button className="setting-button">Change Password</button>
-              </div>
-              
               <div className="setting-item">
                 <label className="setting-label">Auto-lock Timeout</label>
                 <select className="setting-select">
@@ -308,7 +324,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, matrixSettings, on
       <div className="settings-container">
         {/* Header */}
         <div className="settings-header">
-          <h2 className="settings-title">Settings</h2>
+          <div className="flex items-center">
+            <Settings className="w-5 h-5 mr-2" />
+            <h2>MotherCore Settings</h2>
+          </div>
           <button onClick={onClose} className="settings-close">
             <X className="w-5 h-5" />
           </button>
@@ -322,7 +341,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, matrixSettings, on
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => setActiveTab(tab.id as SettingsTab)}
                   className={`settings-tab ${activeTab === tab.id ? 'active' : ''}`}
                 >
                   <Icon className="w-4 h-4" />

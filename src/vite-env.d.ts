@@ -30,11 +30,22 @@ interface ElectronAPI {
   // Pages
   createPage: (data: any) => Promise<{ success: boolean, id?: string, error?: string }>
   getPages: (chapterId?: string) => Promise<{ success: boolean, pages?: any[], error?: string }>
-  getPageContent: (pageId: string) => Promise<{ success: boolean, content?: any, error?: string }>
-  updatePageContent: (pageId: string, content: any, plainText: string) => Promise<{ success: boolean, error?: string }>
+  getPage: (pageId: string) => Promise<{ success: boolean, page?: any, error?: string }>
+  updatePageContent: (pageId: string, content: any, contentText: string) => Promise<{ success: boolean, error?: string }>
+  
+  // Updates
+  getUpdateSettings: () => Promise<{ success: boolean, settings?: any, error?: string }>
+  saveUpdateSettings: (settings: any) => Promise<{ success: boolean, error?: string }>
+  checkForUpdates: (userRequested?: boolean) => Promise<{ success: boolean, updateInfo?: any, error?: string }>
+  downloadUpdate: (updateInfo: any) => Promise<{ success: boolean, downloadPath?: string, error?: string }>
+  installUpdate: (userApproved: boolean) => Promise<{ success: boolean, error?: string }>
   
   // File system operations
-  selectDirectory: () => Promise<{ canceled: boolean, path?: string }>
+  openFileDialog: (options: any) => Promise<any>
+  saveFileDialog: (options: any) => Promise<any>
+  
+  // External links
+  openExternalUrl: (url: string) => Promise<boolean>
   
   // Utilities
   logError: (error: string) => void

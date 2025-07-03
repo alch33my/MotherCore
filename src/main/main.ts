@@ -1,397 +1,374 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
 import { fileURLToPath } from 'url'
 import path from 'path'
+import fs from 'fs/promises'
 import DatabaseManager from './database'
 import { v4 as uuidv4 } from 'uuid'
 import bcryptjs from 'bcryptjs'
+import SecureUpdateManager from './update-manager'
 
 // Workaround for __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-// Database instance
-let dbManager: DatabaseManager
 // Store main window reference
 let mainWindow: BrowserWindow | null = null
+let dbManager: DatabaseManager
+let updateManager: SecureUpdateManager
 
 function createWindow() {
+  // Initialize database before creating the window
+  initializeDatabase()
+  
+  // Initialize update manager
+  initializeUpdateManager()
+  
   // Determine the preload script path based on environment
   const preloadPath = app.isPackaged 
-    ? path.join(__dirname, '..', 'preload', 'preload.js')
+    ? path.join(__dirname, '../preload/preload.js')
     : path.join(__dirname, '../../dist-electron/preload/preload.js')
-
-  console.log('Preload script path:', preloadPath)
-  console.log('Current directory:', __dirname)
   
+  console.log('Using preload script at:', preloadPath)
+  
+  // Create the browser window.
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    backgroundColor: '#0a0a0a',
-    title: 'MotherCore Digital Library',
+    width: 1280,
+    height: 768,
     webPreferences: {
       preload: preloadPath,
-      nodeIntegration: false,
       contextIsolation: true,
-      sandbox: false // Allow access to Node.js APIs in preload script
+      nodeIntegration: false,
     },
-    // Remove default frame for custom title bar
-    frame: false
+    frame: false,
+    titleBarStyle: 'hidden',
   })
 
-  // Load the index.html from the Vite dev server or the built version
-  if (process.env.VITE_DEV_SERVER_URL) {
-    mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
-    mainWindow.webContents.openDevTools()
+  // Load the app - use VITE_DEV_SERVER_URL in dev, file:// in production
+  if (!app.isPackaged && process.env['VITE_DEV_SERVER_URL']) {
+    mainWindow.loadURL(process.env['VITE_DEV_SERVER_URL'])
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../../dist/index.html'))
+    // Load the index.html from the dist folder
+    mainWindow.loadFile(path.join(__dirname, '../../index.html'))
   }
+
+  // Set up IPC handlers for window controls
+  ipcMain.handle('window-minimize', () => {
+    mainWindow?.minimize()
+  })
+
+  ipcMain.handle('window-maximize', () => {
+    if (mainWindow?.isMaximized()) {
+      mainWindow.unmaximize()
+    } else {
+      mainWindow?.maximize()
+    }
+    return mainWindow?.isMaximized()
+  })
+
+  ipcMain.handle('window-close', () => {
+    mainWindow?.close()
+  })
 
   // Open dev tools to help with debugging
   mainWindow.webContents.openDevTools()
+
+  setupIpcHandlers()
 }
 
-// Initialize database and set up IPC handlers
-function initializeApplication() {
+// Initialize the database connection
+function initializeDatabase() {
   try {
-    console.log('Initializing database...')
-    dbManager = DatabaseManager.getInstance()
+    dbManager = new DatabaseManager()
     console.log('Database initialized successfully')
-    
-    // Log current database state on startup
-    dbManager.logDbState()
-    
-    // Window control handlers
-    ipcMain.handle('minimizeWindow', () => {
-      if (mainWindow) mainWindow.minimize()
-      return true
-    })
-    
-    ipcMain.handle('maximizeWindow', () => {
-      if (mainWindow) {
-        if (mainWindow.isMaximized()) {
-          mainWindow.unmaximize()
-        } else {
-          mainWindow.maximize()
-        }
-      }
-      return true
-    })
-    
-    ipcMain.handle('closeWindow', () => {
-      if (mainWindow) mainWindow.close()
-      return true
-    })
-    
-    // Authentication handlers
-    ipcMain.handle('check-auth-status', () => {
-      const credentials = dbManager.getAuthCredentials()
-      return !!credentials
-    })
-    
-    ipcMain.handle('setup-auth', async (event, password) => {
-      try {
-        const salt = bcryptjs.genSaltSync(10)
-        const passwordHash = bcryptjs.hashSync(password, salt)
-        
-        dbManager.saveAuthCredentials(passwordHash, salt)
-        return { success: true }
-      } catch (error) {
-        console.error('Auth setup error:', error)
-        return { success: false, error: (error as Error).message }
-      }
-    })
-    
-    ipcMain.handle('authenticate', async (event, password) => {
-      try {
-        const auth = dbManager.getAuthCredentials()
-        if (!auth) return false
+  } catch (err) {
+    console.error('Failed to initialize database:', err)
+  }
+}
 
-        return bcryptjs.compareSync(password, auth.password_hash)
-      } catch (error) {
-        console.error('Authentication error:', error)
-        return false
-      }
-    })
-    
-    // Organization handlers
-    ipcMain.handle('create-organization', async (_, data) => {
-      try {
-        const id = uuidv4()
-        console.log('Creating organization with data:', { id, ...data })
-        
-        // Perform the operation
-        const result = await dbManager.createOrganization({
-          id,
-          ...data
-        })
-        console.log('Database operation result:', result)
-        
-        // Verify organization was actually created
-        const orgAfter = await dbManager.getOrganization(id)
-        console.log('Organization created successfully:', !!orgAfter)
-        
-        if (orgAfter) {
-          return { success: true, id, organization: orgAfter }
-        } else {
-          return { success: false, error: 'Organization creation failed - could not retrieve created organization' }
-        }
-      } catch (error) {
-        console.error('Error creating organization:', error)
-        return { success: false, error: (error as Error).message }
-      }
-    })
-    
-    ipcMain.handle('get-organizations', async () => {
-      try {
-        const organizations = await dbManager.getOrganizations()
-        return { success: true, organizations }
-      } catch (error) {
-        return { success: false, error: (error as Error).message }
-      }
-    })
-    
-    // Project handlers
-    ipcMain.handle('create-project', async (_, data) => {
-      try {
-        const id = uuidv4()
-        console.log('Creating project with data:', { id, ...data })
-        
-        // Log database structure before the operation
-        const orgBefore = await dbManager.getOrganization(data.organization_id)
-        console.log('Parent organization exists:', !!orgBefore)
-        
-        // Perform the operation
-        const result = await dbManager.createProject({
-          id,
-          ...data
-        })
-        console.log('Database operation result:', result)
-        
-        // Verify project was actually created
-        const projectAfter = await dbManager.getProject(id)
-        console.log('Project created successfully:', !!projectAfter)
-        
-        // Log the retrieved project data
-        if (projectAfter) {
-          console.log('Project data:', projectAfter)
-          return { success: true, id, project: projectAfter }
-        } else {
-          console.log('WARNING: Project could not be retrieved after creation')
-          return { success: false, error: 'Project creation failed - could not retrieve created project' }
-        }
-      } catch (error) {
-        console.error('Error creating project:', error)
-        return { success: false, error: (error as Error).message }
-      }
-    })
-    
-    ipcMain.handle('get-projects', async (_, orgId) => {
-      try {
-        const projects = await dbManager.getProjects(orgId)
-        return { success: true, projects }
-      } catch (error) {
-        return { success: false, error: (error as Error).message }
-      }
-    })
-    
-    // Book handlers
-    ipcMain.handle('create-book', async (_, data) => {
-      try {
-        const id = uuidv4()
-        console.log('Creating book with data:', { id, ...data })
-        
-        // Perform the operation
-        const result = await dbManager.createBook({
-          id,
-          ...data
-        })
-        console.log('Database operation result:', result)
-        
-        // Verify book was actually created
-        const bookAfter = await dbManager.getBook(id)
-        console.log('Book created successfully:', !!bookAfter)
-        
-        if (bookAfter) {
-          return { success: true, id, book: bookAfter }
-        } else {
-          return { success: false, error: 'Book creation failed - could not retrieve created book' }
-        }
-      } catch (error) {
-        console.error('Error creating book:', error)
-        return { success: false, error: (error as Error).message }
-      }
-    })
-    
-    ipcMain.handle('get-books', async (_, projectId) => {
-      try {
-        const books = await dbManager.getBooks(projectId)
-        return { success: true, books }
-      } catch (error) {
-        return { success: false, error: (error as Error).message }
-      }
-    })
-    
-    // Chapter handlers
-    ipcMain.handle('create-chapter', async (_, data) => {
-      try {
-        const id = uuidv4()
-        console.log('Creating chapter with data:', { id, ...data })
-        
-        // Perform the operation
-        const result = await dbManager.createChapter({
-          id,
-          ...data
-        })
-        console.log('Database operation result:', result)
-        
-        // Verify chapter was actually created
-        const chapterAfter = await dbManager.getChapter(id)
-        console.log('Chapter created successfully:', !!chapterAfter)
-        
-        if (chapterAfter) {
-          return { success: true, id, chapter: chapterAfter }
-        } else {
-          return { success: false, error: 'Chapter creation failed - could not retrieve created chapter' }
-        }
-      } catch (error) {
-        console.error('Error creating chapter:', error)
-        return { success: false, error: (error as Error).message }
-      }
-    })
-    
-    ipcMain.handle('get-chapters', async (_, bookId) => {
-      try {
-        const chapters = await dbManager.getChapters(bookId)
-        return { success: true, chapters }
-      } catch (error) {
-        return { success: false, error: (error as Error).message }
-      }
-    })
-    
-    // Page handlers
-    ipcMain.handle('create-page', async (_, data) => {
-      try {
-        const id = uuidv4()
-        console.log('Creating page with data:', { id, ...data })
-        
-        // Perform the operation
-        const result = await dbManager.createPage({
-          id,
-          ...data
-        })
-        console.log('Database operation result:', result)
-        
-        // Verify page was actually created
-        const pageAfter = await dbManager.getPage(id)
-        console.log('Page created successfully:', !!pageAfter)
-        
-        if (pageAfter) {
-          return { success: true, id, page: pageAfter }
-        } else {
-          return { success: false, error: 'Page creation failed - could not retrieve created page' }
-        }
-      } catch (error) {
-        console.error('Error creating page:', error)
-        return { success: false, error: (error as Error).message }
-      }
-    })
-    
-    ipcMain.handle('get-pages', async (_, chapterId) => {
-      try {
-        const pages = await dbManager.getPages(chapterId)
-        return { success: true, pages }
-      } catch (error) {
-        return { success: false, error: (error as Error).message }
-      }
-    })
-    
-    ipcMain.handle('get-page-content', async (_, pageId) => {
-      try {
-        const content = await dbManager.getPageContent(pageId)
-        return { success: true, content }
-      } catch (error) {
-        return { success: false, error: (error as Error).message }
-      }
-    })
-    
-    ipcMain.handle('update-page-content', async (_, pageId, content, plainText) => {
-      try {
-        await dbManager.updatePageContent(pageId, content, plainText)
-        return { success: true }
-      } catch (error) {
-        return { success: false, error: (error as Error).message }
-      }
-    })
-    
-    // File system handlers
-    ipcMain.handle('select-directory', async () => {
-      const result = await dialog.showOpenDialog({ 
-        properties: ['openDirectory'] 
-      })
-      if (result.canceled) {
-        return { canceled: true }
-      }
-      return { canceled: false, path: result.filePaths[0] }
-    })
-    
-    // Error logging
-    ipcMain.on('log-error', (_, error) => {
-      console.error('Application Error:', error)
-    })
-    
-    // Add a refresh handler for debugging and to recover from infinite loops
-    ipcMain.handle('refresh-database', async () => {
-      try {
-        console.log('Refreshing database state')
-        dbManager.logDbState()
-        return { success: true }
-      } catch (error) {
-        console.error('Error refreshing database:', error)
-        return { success: false, error: (error as Error).message }
-      }
-    })
-    
-    // Add a handler to log the organization-projects relationship
-    ipcMain.handle('log-organization-projects', async (_, orgId) => {
-      try {
-        console.log(`\n=== Organization-Projects check for ${orgId} ===`)
-        const org = await dbManager.getOrganization(orgId) as any
-        console.log('Organization:', org ? `${org.id} - ${org.name}` : 'Not found')
-        
-        const projects = await dbManager.getProjects(orgId)
-        console.log(`Projects (${projects.length}):`)
-        projects.forEach((project: any, i: number) => {
-          console.log(`${i+1}. ${project.id} - ${project.name} (org: ${project.organization_id})`)
-        })
-        console.log('=== End Organization-Projects check ===\n')
-        
-        return { success: true, org, projects }
-      } catch (error) {
-        console.error('Error logging organization-projects:', error)
-        return { success: false, error: (error as Error).message }
-      }
-    })
-  } catch (error) {
-    console.error('Error initializing application:', error)
+// Initialize the update manager
+function initializeUpdateManager() {
+  try {
+    updateManager = new SecureUpdateManager(dbManager)
+    console.log('Update manager initialized successfully')
+  } catch (err) {
+    console.error('Failed to initialize update manager:', err)
   }
 }
 
 app.whenReady().then(() => {
-  initializeApplication()
   createWindow()
 
-  app.on('activate', function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+  app.on('activate', () => {
+    // On macOS it's common to re-create a window in the app when the
+    // dock icon is clicked and there are no other windows open.
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow()
+    }
   })
 })
 
-app.on('window-all-closed', function () {
-  if (process.platform !== 'darwin') app.quit()
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit()
+  }
 })
 
-app.on('will-quit', () => {
-  // Clean up resources
-  if (dbManager) {
-    dbManager.close()
-  }
-}) 
+// Set up IPC handlers for database operations
+function setupIpcHandlers() {
+  // Authentication handlers
+  ipcMain.handle('check-auth-status', async () => {
+    try {
+      const credentials = dbManager.getAuthCredentials()
+      return !!credentials
+    } catch (err) {
+      console.error('Error checking auth status:', err)
+      return false
+    }
+  })
+
+  ipcMain.handle('setup-auth', async (_, password: string) => {
+    try {
+      const salt = bcryptjs.genSaltSync(10)
+      const hash = bcryptjs.hashSync(password, salt)
+      dbManager.saveAuthCredentials(hash, salt)
+      return { success: true }
+    } catch (err) {
+      console.error('Error setting up auth:', err)
+      return { success: false, error: 'Failed to set up authentication' }
+    }
+  })
+
+  ipcMain.handle('authenticate', async (_, password: string) => {
+    try {
+      const credentials = dbManager.getAuthCredentials()
+      if (!credentials) {
+        return false
+      }
+      
+      const isMatch = bcryptjs.compareSync(password, credentials.password_hash)
+      return isMatch
+    } catch (err) {
+      console.error('Error authenticating:', err)
+      return false
+    }
+  })
+  
+  // IPC handlers for update system
+  ipcMain.handle('get-update-settings', async () => {
+    try {
+      const settings = updateManager.getSettings()
+      return { success: true, settings }
+    } catch (err) {
+      console.error('Error getting update settings:', err)
+      return { success: false, error: 'Failed to get update settings' }
+    }
+  })
+  
+  ipcMain.handle('save-update-settings', async (_, settings) => {
+    try {
+      const result = updateManager.saveSettings(settings)
+      return { success: result }
+    } catch (err) {
+      console.error('Error saving update settings:', err)
+      return { success: false, error: 'Failed to save update settings' }
+    }
+  })
+  
+  ipcMain.handle('check-for-updates', async (_, userRequested) => {
+    try {
+      const updateInfo = await updateManager.checkForUpdates(userRequested)
+      return { success: !!updateInfo, updateInfo }
+    } catch (err) {
+      console.error('Error checking for updates:', err)
+      return { success: false, error: 'Failed to check for updates' }
+    }
+  })
+  
+  ipcMain.handle('download-update', async (_, updateInfo) => {
+    try {
+      const downloadPath = await updateManager.downloadUpdate(updateInfo)
+      return { success: !!downloadPath, downloadPath }
+    } catch (err) {
+      console.error('Error downloading update:', err)
+      return { success: false, error: 'Failed to download update' }
+    }
+  })
+  
+  ipcMain.handle('install-update', async (_, userApproved) => {
+    try {
+      const result = await updateManager.installUpdate('', userApproved)
+      return { success: result }
+    } catch (err) {
+      console.error('Error installing update:', err)
+      return { success: false, error: 'Failed to install update' }
+    }
+  })
+
+  // Organization operations
+  ipcMain.handle('get-organizations', async () => {
+    try {
+      const organizations = dbManager.getOrganizations()
+      return { success: true, organizations }
+    } catch (err) {
+      console.error('Error getting organizations:', err)
+      return { success: false, error: 'Failed to get organizations' }
+    }
+  })
+
+  ipcMain.handle('create-organization', async (_, data) => {
+    try {
+      const result = dbManager.createOrganization(data)
+      return { success: true, id: result.lastInsertRowid }
+    } catch (err) {
+      console.error('Error creating organization:', err)
+      return { success: false, error: 'Failed to create organization' }
+    }
+  })
+
+  // Project operations
+  ipcMain.handle('get-projects', async (_, organizationId) => {
+    try {
+      const projects = dbManager.getProjects(organizationId)
+      return { success: true, projects }
+    } catch (err) {
+      console.error('Error getting projects:', err)
+      return { success: false, error: 'Failed to get projects' }
+    }
+  })
+
+  ipcMain.handle('create-project', async (_, data) => {
+    try {
+      const result = dbManager.createProject(data)
+      return { success: true, id: result.lastInsertRowid }
+    } catch (err) {
+      console.error('Error creating project:', err)
+      return { success: false, error: 'Failed to create project' }
+    }
+  })
+
+  // Book operations
+  ipcMain.handle('get-books', async (_, projectId) => {
+    try {
+      const books = dbManager.getBooks(projectId)
+      return { success: true, books }
+    } catch (err) {
+      console.error('Error getting books:', err)
+      return { success: false, error: 'Failed to get books' }
+    }
+  })
+
+  ipcMain.handle('create-book', async (_, data) => {
+    try {
+      const result = dbManager.createBook(data)
+      return { success: true, id: result.lastInsertRowid }
+    } catch (err) {
+      console.error('Error creating book:', err)
+      return { success: false, error: 'Failed to create book' }
+    }
+  })
+
+  // Chapter operations
+  ipcMain.handle('get-chapters', async (_, bookId) => {
+    try {
+      const chapters = dbManager.getChapters(bookId)
+      return { success: true, chapters }
+    } catch (err) {
+      console.error('Error getting chapters:', err)
+      return { success: false, error: 'Failed to get chapters' }
+    }
+  })
+
+  ipcMain.handle('create-chapter', async (_, data) => {
+    try {
+      const result = dbManager.createChapter(data)
+      return { success: true, id: result.lastInsertRowid }
+    } catch (err) {
+      console.error('Error creating chapter:', err)
+      return { success: false, error: 'Failed to create chapter' }
+    }
+  })
+
+  // Page operations
+  ipcMain.handle('get-pages', async (_, chapterId) => {
+    try {
+      const pages = dbManager.getPages(chapterId)
+      return { success: true, pages }
+    } catch (err) {
+      console.error('Error getting pages:', err)
+      return { success: false, error: 'Failed to get pages' }
+    }
+  })
+
+  ipcMain.handle('get-page-content', async (_, pageId) => {
+    try {
+      const page = dbManager.getPage(pageId)
+      return { success: true, page }
+    } catch (err) {
+      console.error('Error getting page content:', err)
+      return { success: false, error: 'Failed to get page content' }
+    }
+  })
+
+  ipcMain.handle('create-page', async (_, data) => {
+    try {
+      const result = dbManager.createPage(data)
+      return { success: true, id: result.lastInsertRowid }
+    } catch (err) {
+      console.error('Error creating page:', err)
+      return { success: false, error: 'Failed to create page' }
+    }
+  })
+
+  ipcMain.handle('update-page-content', async (_, pageId, content, contentText) => {
+    try {
+      dbManager.updatePageContent(pageId, content, contentText || '')
+      return { success: true }
+    } catch (err) {
+      console.error('Error updating page content:', err)
+      return { success: false, error: 'Failed to update page content' }
+    }
+  })
+
+  // System operations
+  ipcMain.handle('log-error', (_, errorMessage) => {
+    console.error('Client error:', errorMessage)
+    return true
+  })
+
+  // Window control handlers
+  ipcMain.handle('window-minimize', () => {
+    mainWindow?.minimize()
+    return true
+  })
+
+  ipcMain.handle('window-maximize', () => {
+    if (mainWindow?.isMaximized()) {
+      mainWindow?.unmaximize()
+    } else {
+      mainWindow?.maximize()
+    }
+    return mainWindow?.isMaximized()
+  })
+
+  ipcMain.handle('window-close', () => {
+    mainWindow?.close()
+    return true
+  })
+
+  // File system handlers for dialogs
+  ipcMain.handle('open-file-dialog', async (_, options) => {
+    const result = await dialog.showOpenDialog(mainWindow!, options)
+    return result
+  })
+
+  ipcMain.handle('save-file-dialog', async (_, options) => {
+    const result = await dialog.showSaveDialog(mainWindow!, options)
+    return result
+  })
+
+  // External links
+  ipcMain.handle('open-external-url', async (_, url) => {
+    await shell.openExternal(url)
+    return true
+  })
+} 
