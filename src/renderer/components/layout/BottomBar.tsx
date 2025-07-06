@@ -29,6 +29,16 @@ interface BottomBarProps {
   isChatOpen?: boolean;
 }
 
+// Default stats for when none are provided
+const defaultStats = {
+  organizations: 0,
+  projects: 0,
+  books: 0,
+  chapters: 0,
+  notes: 0,
+  storage: '0 KB'
+};
+
 const BottomBar: FC<BottomBarProps> = ({ 
   stats = defaultStats, 
   onToggleChat,
@@ -104,54 +114,54 @@ const BottomBar: FC<BottomBarProps> = ({
   return (
     <div className={`bottom-bar ${isExpanded ? 'expanded' : ''}`}>
       {/* Bottom bar content */}
-      <div className="flex items-center justify-between w-full h-full px-4">
+      <div className="bottom-bar-content">
         {/* Left section */}
-        <div className="flex items-center space-x-4">
-          <div className="status-item flex items-center">
-            <Database className="w-3 h-3 mr-1 text-amber-400" />
-            <span className="text-xs text-amber-400">Connected</span>
+        <div className="bottom-bar-section">
+          <div className="app-info">
+            <span className="logo-text">MOTHERCORE</span>
+            <div className="logo-version">v1.0.0</div>
           </div>
-          <div className="status-item flex items-center">
-            <HardDrive className="w-3 h-3 mr-1 text-amber-400" />
-            <span className="text-xs text-amber-400">{stats.storage}</span>
+          <div className="status-item">
+            <Database className="status-icon" />
+            <span>Connected</span>
+          </div>
+          <div className="status-item">
+            <HardDrive className="status-icon" />
+            <span>{stats.storage}</span>
           </div>
         </div>
         
         {/* Center section with terminal toggle */}
-        <div className="flex items-center space-x-2">
+        <div className="bottom-bar-section">
           <button 
-            className="flex items-center px-4 py-1 rounded hover:bg-amber-500/10 transition-colors"
+            className="bottom-bar-button"
             onClick={() => setIsExpanded(!isExpanded)}
           >
-            <Terminal className="w-3 h-3 mr-2 text-amber-400" />
-            <span className="text-xs text-amber-400">Terminal</span>
+            <Terminal className="button-icon" />
+            <span>Terminal</span>
             <ChevronUp 
-              className={`w-3 h-3 ml-2 text-amber-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+              className={`chevron-icon ${isExpanded ? 'rotate-180' : ''}`}
             />
           </button>
           
           <button 
-            className={`flex items-center px-4 py-1 rounded transition-colors ${
-              isChatOpen 
-                ? 'bg-amber-500/20 text-amber-400' 
-                : 'hover:bg-amber-500/10 text-amber-400/80'
-            }`}
+            className={`bottom-bar-button ${isChatOpen ? 'active' : ''}`}
             onClick={onToggleChat}
           >
-            <MessageSquare className="w-3 h-3 mr-2" />
-            <span className="text-xs">Chat</span>
+            <MessageSquare className="button-icon" />
+            <span>{isChatOpen ? 'Close Chat' : 'Open Chat'}</span>
           </button>
         </div>
         
         {/* Right section */}
-        <div className="flex items-center space-x-4">
-          <div className="status-item flex items-center">
-            <Activity className="w-3 h-3 mr-1 text-amber-400" />
-            <span className="text-xs text-amber-400">System Ready</span>
+        <div className="bottom-bar-section">
+          <div className="status-item">
+            <Activity className="status-icon" />
+            <span>System Ready</span>
           </div>
-          <div className="status-item flex items-center">
-            <Clock className="w-3 h-3 mr-1 text-amber-400" />
-            <span className="text-xs text-amber-400">{new Date().toLocaleTimeString()}</span>
+          <div className="status-item">
+            <Clock className="status-icon" />
+            <span>{new Date().toLocaleTimeString()}</span>
           </div>
         </div>
       </div>
@@ -248,43 +258,41 @@ const BottomBar: FC<BottomBarProps> = ({
                   <div className="bg-black bg-opacity-40 p-3 rounded border border-amber-400/20">
                     <div className="flex items-center mb-2">
                       <Database className="w-4 h-4 text-amber-400 mr-2" />
-                      <h4 className="text-sm font-medium text-amber-400">Database</h4>
+                      <span className="text-xs font-medium text-amber-400">Database</span>
                     </div>
-                    <div className="text-xs space-y-1 text-amber-400/70">
-                      <div className="flex justify-between">
+                    <div className="text-xs text-amber-300/80">
+                      <div className="flex justify-between mb-1">
                         <span>Status:</span>
-                        <span className="flex items-center">
-                          <CheckCircle className="w-3 h-3 text-green-500 mr-1" /> Connected
-                        </span>
+                        <span className="text-green-400">Connected</span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex justify-between mb-1">
                         <span>Storage:</span>
                         <span>{stats.storage}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Last Backup:</span>
-                        <span>None</span>
+                        <span>Entries:</span>
+                        <span>{stats.organizations + stats.projects + stats.books + stats.chapters + stats.notes}</span>
                       </div>
                     </div>
                   </div>
                   
                   <div className="bg-black bg-opacity-40 p-3 rounded border border-amber-400/20">
                     <div className="flex items-center mb-2">
-                      <HardDrive className="w-4 h-4 text-amber-400 mr-2" />
-                      <h4 className="text-sm font-medium text-amber-400">Content</h4>
+                      <Activity className="w-4 h-4 text-amber-400 mr-2" />
+                      <span className="text-xs font-medium text-amber-400">Performance</span>
                     </div>
-                    <div className="text-xs space-y-1 text-amber-400/70">
-                      <div className="flex justify-between">
-                        <span>Organizations:</span>
-                        <span>{stats.organizations}</span>
+                    <div className="text-xs text-amber-300/80">
+                      <div className="flex justify-between mb-1">
+                        <span>Memory:</span>
+                        <span>128 MB</span>
+                      </div>
+                      <div className="flex justify-between mb-1">
+                        <span>CPU:</span>
+                        <span>2%</span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Projects:</span>
-                        <span>{stats.projects}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Books:</span>
-                        <span>{stats.books}</span>
+                        <span>Uptime:</span>
+                        <span>00:42:18</span>
                       </div>
                     </div>
                   </div>
@@ -295,21 +303,28 @@ const BottomBar: FC<BottomBarProps> = ({
             {/* Logs Tab */}
             {activeTab === 'logs' && (
               <div className="p-4">
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="text-sm font-semibold text-amber-400">Application Logs</h3>
-                  <button className="text-xs bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 px-2 py-1 rounded">
-                    Clear Logs
-                  </button>
-                </div>
-                <div className="text-xs space-y-1 text-amber-400/70">
-                  <div className="bg-black bg-opacity-40 p-2 rounded border border-amber-400/10">
-                    <span className="text-amber-400/50">[12:45:32]</span> Application started
+                <h3 className="text-sm font-semibold text-amber-400 mb-3">System Logs</h3>
+                
+                <div className="console-logs text-xs">
+                  <div className="log-entry">
+                    <span className="log-time">10:42:15</span>
+                    <span className="log-level info">INFO</span>
+                    <span className="log-message">Application started</span>
                   </div>
-                  <div className="bg-black bg-opacity-40 p-2 rounded border border-amber-400/10">
-                    <span className="text-amber-400/50">[12:45:35]</span> Database connected
+                  <div className="log-entry">
+                    <span className="log-time">10:42:16</span>
+                    <span className="log-level info">INFO</span>
+                    <span className="log-message">Database connected</span>
                   </div>
-                  <div className="bg-black bg-opacity-40 p-2 rounded border border-amber-400/10">
-                    <span className="text-amber-400/50">[12:46:01]</span> User session initialized
+                  <div className="log-entry">
+                    <span className="log-time">10:42:18</span>
+                    <span className="log-level warn">WARN</span>
+                    <span className="log-message">Cache initialization delayed</span>
+                  </div>
+                  <div className="log-entry">
+                    <span className="log-time">10:42:20</span>
+                    <span className="log-level info">INFO</span>
+                    <span className="log-message">UI components rendered</span>
                   </div>
                 </div>
               </div>
@@ -318,16 +333,18 @@ const BottomBar: FC<BottomBarProps> = ({
             {/* Search Tab */}
             {activeTab === 'search' && (
               <div className="p-4">
-                <div className="relative mb-4">
-                  <Search className="absolute left-3 top-2.5 w-4 h-4 text-amber-400/50" />
-                  <input
-                    type="text"
-                    placeholder="Search across all content..."
-                    className="w-full bg-black bg-opacity-40 text-amber-400 border border-amber-400/30 rounded pl-10 pr-4 py-2 text-sm focus:border-amber-400/50 focus:outline-none"
+                <h3 className="text-sm font-semibold text-amber-400 mb-3">Search Console</h3>
+                
+                <div className="mb-4">
+                  <input 
+                    type="text" 
+                    className="console-search w-full bg-black bg-opacity-50 border border-amber-400/30 rounded px-3 py-2 text-amber-400 text-xs"
+                    placeholder="Search logs, commands, or documentation..."
                   />
                 </div>
-                <div className="text-xs text-amber-400/70 text-center py-10">
-                  Enter a search term to find content across all notes
+                
+                <div className="text-xs text-amber-400/70 italic">
+                  Enter a search term and press Enter to search.
                 </div>
               </div>
             )}
@@ -336,16 +353,6 @@ const BottomBar: FC<BottomBarProps> = ({
       )}
     </div>
   );
-};
-
-// Default stats when none provided
-const defaultStats = {
-  organizations: 0,
-  projects: 0,
-  books: 0,
-  chapters: 0,
-  notes: 0,
-  storage: '0 KB'
 };
 
 export default BottomBar; 

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MotherCore SVG Icon Tester</title>
+    <style>
+        :root {
+            --mothercore-primary: #fefcac;
+            --mothercore-accent: #6e3d21;
+            --mothercore-bg: #161719;
+        }
+
+        body {
+            background-color: #161719;
+            color: #fefcac;
+            font-family: 'Fira Code', monospace, sans-serif;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: #ffd700;
+            margin-bottom: 30px;
+        }
+
+        .icon-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .icon-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 8px;
+        }
+
+        .icon-display {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 10px;
+        }
+
+        .icon-name {
+            font-size: 12px;
+            text-align: center;
+        }
+
+        /* Icon Classes for SVG */
+        .icon-primary {
+            fill: var(--mothercore-primary);
+            stroke: var(--mothercore-primary);
+        }
+
+        .icon-accent {
+            fill: var(--mothercore-accent);
+            stroke: var(--mothercore-accent);
+        }
+
+        .icon-neural {
+            fill: none;
+            stroke: var(--mothercore-primary);
+            opacity: 0.6;
+        }
+
+        .icon-background {
+            fill: var(--mothercore-bg);
+        }
+
+        .controls {
+            margin: 20px 0;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 8px;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #ffd700;
+        }
+
+        input[type="color"] {
+            width: 50px;
+            height: 30px;
+            background: none;
+            border: none;
+        }
+
+        button {
+            background-color: rgba(255, 215, 0, 0.2);
+            color: #ffd700;
+            border: 1px solid rgba(255, 215, 0, 0.5);
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: rgba(255, 215, 0, 0.3);
+        }
+
+        .error {
+            color: #ff4444;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>MotherCore SVG Icon Tester</h1>
+    
+    <div class="controls">
+        <div class="control-group">
+            <label for="primaryColor">Primary Color:</label>
+            <input type="color" id="primaryColor" value="#fefcac">
+        </div>
+        
+        <div class="control-group">
+            <label for="accentColor">Accent Color:</label>
+            <input type="color" id="accentColor" value="#6e3d21">
+        </div>
+        
+        <button id="applyColors">Apply Colors</button>
+    </div>
+    
+    <div class="icon-grid" id="iconGrid">
+        <!-- Icons will be inserted here by JavaScript -->
+    </div>
+
+    <script>
+        // List of available icons
+        const icons = [
+            'app-icon-main',
+            'book-icon-black',
+            'book-icon-greys',
+            'ai-icon-black',
+            'organization-icon',
+            'plus-icon',
+            'save-file-icon'
+        ];
+
+        const iconGrid = document.getElementById('iconGrid');
+        
+        // Load all icons
+        function loadIcons() {
+            iconGrid.innerHTML = '';
+            
+            icons.forEach(iconName => {
+                const card = document.createElement('div');
+                card.className = 'icon-card';
+                
+                const iconDisplay = document.createElement('div');
+                iconDisplay.className = 'icon-display';
+                
+                // Load the SVG file
+                fetch(`/Images/SVG/${iconName}.svg`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`Failed to load ${iconName}.svg`);
+                        }
+                        return response.text();
+                    })
+                    .then(svgText => {
+                        iconDisplay.innerHTML = svgText;
+                    })
+                    .catch(error => {
+                        iconDisplay.innerHTML = '❌';
+                        console.error(error);
+                    });
+                
+                const iconNameElem = document.createElement('div');
+                iconNameElem.className = 'icon-name';
+                iconNameElem.textContent = iconName;
+                
+                card.appendChild(iconDisplay);
+                card.appendChild(iconNameElem);
+                iconGrid.appendChild(card);
+            });
+        }
+        
+        // Apply custom colors to all icons
+        function applyColors() {
+            const primaryColor = document.getElementById('primaryColor').value;
+            const accentColor = document.getElementById('accentColor').value;
+            
+            document.documentElement.style.setProperty('--mothercore-primary', primaryColor);
+            document.documentElement.style.setProperty('--mothercore-accent', accentColor);
+        }
+        
+        // Initial load
+        loadIcons();
+        
+        // Setup event listeners
+        document.getElementById('applyColors').addEventListener('click', applyColors);
+    </script>
+</body>
+</html> 

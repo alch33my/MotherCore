@@ -1,5 +1,6 @@
 import React from 'react'
 import { useEffect, useRef } from 'react'
+import { useTheme } from '../../context/ThemeContext'
 
 interface MatrixRainProps {
   width?: number
@@ -10,6 +11,7 @@ interface MatrixRainProps {
   characterSet?: 'binary' | 'katakana' | 'mixed'
   colorScheme?: 'green' | 'gold' | 'blue' | 'purple' | 'gradient'
   intensity?: number // 0-100 for overall visibility
+  theme: 'dark' | 'light'
 }
 
 function MatrixRain({ 
@@ -18,9 +20,11 @@ function MatrixRain({
   fontSize = 16,
   characterSet = 'mixed',
   colorScheme = 'gold',
-  intensity = 70 // Increased default intensity
+  intensity = 70, // Increased default intensity
+  theme
 }: MatrixRainProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const { theme: currentTheme } = useTheme()
 
   useEffect(() => {
     const canvas = canvasRef.current

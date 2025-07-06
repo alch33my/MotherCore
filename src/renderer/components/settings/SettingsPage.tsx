@@ -1,6 +1,5 @@
-import React from 'react'
-import { useState } from 'react';
-import type { FC } from 'react';;
+import React, { useState, createContext, useContext } from 'react';
+import type { FC, ReactNode } from 'react';
 import { 
   Monitor, 
   Palette, 
@@ -10,11 +9,106 @@ import {
   X,
   Download,
   Upload,
-  User,
+  User, 
   Info
 } from 'lucide-react';
 import UpdateSettings from './UpdateSettings';
 import ThemeSettings from './ThemeSettings';
+import DatabaseLocationSettings from './DatabaseLocationSettings';
+import IconTester from '../ui/IconTester';
+
+// Create a context for tabs
+interface TabsContextType {
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
+}
+
+const TabsContext = createContext<TabsContextType | undefined>(undefined);
+
+interface TabsProps {
+  defaultValue: string;
+  children: ReactNode;
+  className?: string;
+}
+
+// Simple tabs implementation
+const Tabs: FC<TabsProps> = ({ defaultValue, children, className = '' }) => {
+  const [activeTab, setActiveTab] = useState(defaultValue);
+  
+  return (
+    <TabsContext.Provider value={{ activeTab, setActiveTab }}>
+      <div className={`mc-tabs ${className}`}>
+        {children}
+      </div>
+    </TabsContext.Provider>
+  );
+};
+
+interface TabsListProps {
+  children: ReactNode;
+  className?: string;
+}
+
+const TabsList: FC<TabsListProps> = ({ children, className = '' }) => {
+  return (
+    <div className={`mc-tabs-list ${className}`}>
+      {children}
+    </div>
+  );
+};
+
+interface TabsTriggerProps {
+  value: string;
+  children: ReactNode;
+  className?: string;
+}
+
+const TabsTrigger: FC<TabsTriggerProps> = ({ value, children, className = '' }) => {
+  const context = useContext(TabsContext);
+  
+  if (!context) {
+    throw new Error('TabsTrigger must be used within a Tabs component');
+  }
+  
+  const { activeTab, setActiveTab } = context;
+  const isActive = activeTab === value;
+  
+  return (
+    <button
+      className={`mc-tabs-trigger ${isActive ? 'active' : ''} ${className}`}
+      onClick={() => setActiveTab(value)}
+      type="button"
+    >
+      {children}
+    </button>
+  );
+};
+
+interface TabsContentProps {
+  value: string;
+  children: ReactNode;
+  className?: string;
+}
+
+const TabsContent: FC<TabsContentProps> = ({ value, children, className = '' }) => {
+  const context = useContext(TabsContext);
+  
+  if (!context) {
+    throw new Error('TabsContent must be used within a Tabs component');
+  }
+  
+  const { activeTab } = context;
+  
+  if (activeTab !== value) {
+    return null;
+  }
+  
+  return (
+    <div className={`mc-tabs-content ${className}`}>
+      {children}
+    </div>
+  );
+};
 
 interface MatrixSettings {
   intensity: number;
@@ -48,6 +142,7 @@ const SettingsPage: FC<SettingsPageProps> = ({ onClose, matrixSettings, onMatrix
     email: '',
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [showIconTester, setShowIconTester] = useState(false);
 
   const tabs: { id: SettingsTab; label: string; icon: React.ElementType }[] = [
     { id: 'profile', label: 'Profile', icon: User },
@@ -72,9 +167,9 @@ const SettingsPage: FC<SettingsPageProps> = ({ onClose, matrixSettings, onMatrix
             <div className="settings-grid">
               <div className="setting-item">
                 <label className="setting-label">Display Name</label>
-                <input 
-                  type="text" 
-                  className="form-input" 
+                <input
+                  type="text"
+                  className="form-input"
                   placeholder="Your name"
                   value={profileData.displayName}
                   onChange={(e) => setProfileData(prev => ({ ...prev, displayName: e.target.value }))}
@@ -234,6 +329,17 @@ const SettingsPage: FC<SettingsPageProps> = ({ onClose, matrixSettings, onMatrix
         return (
           <div className="settings-content">
             <h3 className="settings-section-title">Data Management</h3>
+            
+            {/* Database Location Section */}
+            <div className="setting-group mt-4 mb-8 p-4 bg-matrix-black/30 border border-matrix-amber/20 rounded-lg">
+              <h4 className="text-matrix-gold text-lg mb-4 flex items-center">
+                <Database size={18} className="mr-2" />
+                Database Location
+              </h4>
+              
+              <DatabaseLocationSettings />
+            </div>
+            
             <div className="settings-grid">
               <div className="setting-item">
                 <label className="setting-label">Export All Data</label>
@@ -421,7 +527,53 @@ const SettingsPage: FC<SettingsPageProps> = ({ onClose, matrixSettings, onMatrix
 
           {/* Content */}
           <div className="settings-main">
+            <Tabs defaultValue="appearance">
+              <TabsList>
+                <TabsTrigger value="appearance">Appearance</TabsTrigger>
+                <TabsTrigger value="database">Database</TabsTrigger>
+                <TabsTrigger value="updates">Updates</TabsTrigger>
+                <TabsTrigger value="advanced">Advanced</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="appearance">
             {renderTabContent()}
+                
+                <div className="settings-section">
+                  <h2 className="settings-section-title">Icons</h2>
+                  <div className="settings-section-content">
+                    <button 
+                      className="button primary" 
+                      onClick={() => setShowIconTester(prev => !prev)}
+                    >
+                      {showIconTester ? 'Hide Icon Tester' : 'Show Icon Tester'}
+                    </button>
+                    
+                    {showIconTester && (
+                      <div className="icon-tester-container">
+                        <IconTester onClose={() => setShowIconTester(false)} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="database">
+                <DatabaseLocationSettings />
+              </TabsContent>
+              
+              <TabsContent value="updates">
+                <UpdateSettings onClose={() => console.log('Update settings closed')} />
+              </TabsContent>
+              
+              <TabsContent value="advanced">
+                <div className="settings-section">
+                  <h2 className="settings-section-title">Advanced Settings</h2>
+                  <div className="settings-section-content">
+                    <p>Advanced settings will be available in future versions.</p>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
 

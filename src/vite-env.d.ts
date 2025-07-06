@@ -1,63 +1,96 @@
 /// <reference types="vite/client" />
+/// <reference types="vite-plugin-svgr/client" />
 
 // Add declaration for node-fetch
 declare module 'node-fetch' {
   export default function fetch(url: string | Request, init?: RequestInit): Promise<Response>;
 }
 
-interface ElectronAPI {
-  // Window control
-  minimizeWindow: () => Promise<boolean>
-  maximizeWindow: () => Promise<boolean>
-  closeWindow: () => Promise<boolean>
-  
-  // Authentication
-  checkAuthStatus: () => Promise<boolean>
-  setupAuth: (password: string) => Promise<{ success: boolean, error?: string}>
-  authenticate: (password: string) => Promise<boolean>
-  
-  // Organizations
-  createOrganization: (data: any) => Promise<{ success: boolean, id?: string, error?: string }>
-  getOrganizations: () => Promise<{ success: boolean, organizations?: any[], error?: string }>
-  
-  // Projects
-  createProject: (data: any) => Promise<{ success: boolean, id?: string, error?: string }>
-  getProjects: (organizationId?: string) => Promise<{ success: boolean, projects?: any[], error?: string }>
-  
-  // Books
-  createBook: (data: any) => Promise<{ success: boolean, id?: string, error?: string }>
-  getBooks: (projectId?: string) => Promise<{ success: boolean, books?: any[], error?: string }>
-  
-  // Chapters
-  createChapter: (data: any) => Promise<{ success: boolean, id?: string, error?: string }>
-  getChapters: (bookId?: string) => Promise<{ success: boolean, chapters?: any[], error?: string }>
-  
-  // Pages
-  createPage: (data: any) => Promise<{ success: boolean, id?: string, error?: string }>
-  getPages: (chapterId?: string) => Promise<{ success: boolean, pages?: any[], error?: string }>
-  getPage: (pageId: string) => Promise<{ success: boolean, page?: any, error?: string }>
-  getPageContent: (pageId: string) => Promise<{ success: boolean, content?: string, page?: any, error?: string }>
-  updatePageContent: (pageId: string, content: any, contentText: string) => Promise<{ success: boolean, error?: string }>
-  updatePage: (data: { id: string, content: string }) => Promise<{ success: boolean, error?: string }>
-  
-  // Updates
-  getUpdateSettings: () => Promise<{ success: boolean, settings?: any, error?: string }>
-  saveUpdateSettings: (settings: any) => Promise<{ success: boolean, error?: string }>
-  checkForUpdates: (userRequested?: boolean) => Promise<{ success: boolean, updateInfo?: any, error?: string }>
-  downloadUpdate: (updateInfo: any) => Promise<{ success: boolean, downloadPath?: string, error?: string }>
-  installUpdate: (userApproved: boolean) => Promise<{ success: boolean, error?: string }>
-  
-  // File system operations
-  openFileDialog: (options: any) => Promise<any>
-  saveFileDialog: (options: any) => Promise<any>
-  
-  // External links
-  openExternalUrl: (url: string) => Promise<boolean>
-  
-  // Utilities
-  logError: (error: string) => void
+// Declare SVG modules to be used as React components
+declare module '*.svg' {
+  import React = require('react');
+  export const ReactComponent: React.FunctionComponent<React.SVGProps<SVGSVGElement>>;
+  const src: string;
+  export default src;
 }
 
+interface ImportMetaEnv {
+  readonly VITE_APP_TITLE: string
+  // more env variables...
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv
+}
+
+// Electron API interface
 interface Window {
-  electronAPI?: ElectronAPI
+  electronAPI?: {
+    // Organization management
+    getOrganizations: () => Promise<any>;
+    createOrganization: (data: any) => Promise<any>;
+    
+    // Project management
+    getProjects: (orgId: string) => Promise<any>;
+    createProject: (data: any) => Promise<any>;
+    
+    // Book management
+    getBooks: (projectId: string) => Promise<any>;
+    createBook: (data: any) => Promise<any>;
+    
+    // Chapter management
+    getChapters: (bookId: string) => Promise<any>;
+    createChapter: (data: any) => Promise<any>;
+    
+    // Page management
+    getPages: (chapterId: string) => Promise<any>;
+    createPage: (data: any) => Promise<any>;
+    getPage: (pageId: string) => Promise<any>;
+    getPageContent: (pageId: string) => Promise<any>;
+    updatePage: (data: any) => Promise<any>;
+    updatePageContent: (pageId: string, content: string, plainText: string) => Promise<any>;
+    
+    // Database location management
+    getDatabaseLocation: () => Promise<any>;
+    setDatabaseLocation: (path: string) => Promise<any>;
+    resetDatabaseLocation: () => Promise<any>;
+    changeDatabaseLocation: (path: string) => Promise<any>;
+    selectDirectory: () => Promise<any>;
+    
+    // Update management
+    checkForUpdates: () => Promise<any>;
+    setAutoUpdate: (enabled: boolean) => Promise<any>;
+    getAutoUpdateSetting: () => Promise<any>;
+    getUpdateSettings: () => Promise<any>;
+    saveUpdateSettings: (settings: any) => Promise<any>;
+    downloadUpdate: (updateInfo: any) => Promise<any>;
+    installUpdate: (userApproved: boolean) => Promise<any>;
+    
+    // File dialogs
+    openFileDialog: (options: any) => Promise<any>;
+    saveFileDialog: (options: any) => Promise<any>;
+    
+    // Window management
+    minimizeWindow: () => void;
+    maximizeWindow: () => Promise<boolean>;
+    closeWindow: () => void;
+    onMaximizeChange: (callback: (isMaximized: boolean) => void) => void;
+    offMaximizeChange: (callback: (isMaximized: boolean) => void) => void;
+    
+    // Authentication
+    checkAuthStatus: () => Promise<boolean>;
+    setupAuth: (password: string, dbPath?: string) => Promise<any>;
+    authenticate: (password: string) => Promise<boolean>;
+    
+    // External links
+    openExternalUrl: (url: string) => Promise<boolean>;
+    
+    // Logging
+    logError: (message: string) => void;
+  }
+}
+
+declare module 'vite-plugin-svgr' {
+  import { Plugin } from 'vite';
+  export default function svgr(options?: any): Plugin;
 }

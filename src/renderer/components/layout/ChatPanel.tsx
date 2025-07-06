@@ -23,6 +23,8 @@ interface Message {
 }
 
 const ChatPanel: FC<ChatPanelProps> = ({ isOpen, onClose }) => {
+  if (!isOpen) return null;
+  
   const [inputValue, setInputValue] = useState('');
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -120,10 +122,7 @@ const ChatPanel: FC<ChatPanelProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div 
-      className={`chat-panel ${isOpen ? 'open' : ''}`}
-      aria-hidden={!isOpen}
-    >
+    <div className="chat-panel">
       <div className="chat-header">
         <h3 className="chat-title">MotherCore Assistant</h3>
         <div className="chat-actions">

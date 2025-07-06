@@ -8,7 +8,6 @@ interface Organization {
   id: string
   name: string
   description?: string
-  color?: string
   icon?: string
 }
 
@@ -60,10 +59,44 @@ interface AuthCredentials {
 class DatabaseManager {
   private db: any
   private dbPath: string
+  private isCustomPath: boolean
 
   constructor(dbPath?: string) {
-    // Default path is in the userData directory
-    this.dbPath = dbPath || path.join(app.getPath('userData'), 'mothercore.db')
+    // Get stored custom path from settings if available
+    let storedPath = this.getStoredDbPath()
+    
+    // If a specific path is provided or we have a stored custom path, use it
+    if (dbPath || storedPath) {
+      this.dbPath = dbPath || storedPath || ''
+      this.isCustomPath = true
+    } else {
+      // Try to use app installation folder first
+      try {
+        // Get the app's root directory
+        const appRootPath = path.dirname(app.getAppPath())
+        const appDataPath = path.join(appRootPath, 'data')
+        const appDbPath = path.join(appDataPath, 'mothercore.db')
+        
+        // Check if we can write to this directory
+        if (!fs.existsSync(appDataPath)) {
+          fs.mkdirSync(appDataPath, { recursive: true })
+        }
+        
+        // Test write access by trying to write a test file
+        const testFile = path.join(appDataPath, '.write-test')
+        fs.writeFileSync(testFile, 'test')
+        fs.unlinkSync(testFile) // Delete test file
+        
+        // If we reach here, the directory is writable
+        this.dbPath = appDbPath
+        this.isCustomPath = false
+      } catch (error) {
+        // Fallback to userData if the app directory is not writable
+        console.log('App directory is not writable, falling back to userData directory')
+        this.dbPath = path.join(app.getPath('userData'), 'mothercore.db')
+        this.isCustomPath = false
+      }
+    }
     
     console.log(`Using database at: ${this.dbPath}`)
     
@@ -74,13 +107,166 @@ class DatabaseManager {
     }
     
     // Initialize database
-    this.db = new Database(this.dbPath)
-    
-    // Enable foreign keys
-    this.db.pragma('foreign_keys = ON')
-    
-    // Create tables if they don't exist
-    this.initializeTables()
+    this.initializeDatabase()
+  }
+
+  private initializeDatabase() {
+    try {
+      this.db = new Database(this.dbPath)
+      
+      // Enable foreign keys
+      this.db.pragma('foreign_keys = ON')
+      
+      // Create tables if they don't exist
+      this.initializeTables()
+    } catch (error: any) {
+      console.error('Error initializing database:', error)
+      throw new Error(`Failed to initialize database at ${this.dbPath}: ${error.message}`)
+    }
+  }
+
+  // Get stored database path from settings
+  private getStoredDbPath(): string | null {
+    try {
+      // We need to be careful here to avoid circular dependencies
+      // Create a temporary connection to the default database
+      const defaultPath = path.join(app.getPath('userData'), 'mothercore.db')
+      
+      // Check if default database exists
+      if (!fs.existsSync(defaultPath)) {
+        return null
+      }
+      
+      // Connect to default database temporarily
+      const tempDb = new Database(defaultPath)
+      
+      // Query for custom database path
+      const stmt = tempDb.prepare('SELECT value FROM app_settings WHERE category = ? AND key = ? LIMIT 1')
+      const result = stmt.get('database', 'customPath') as { value: string } | undefined
+      
+      // Close temporary connection
+      tempDb.close()
+      
+      if (result && result.value) {
+        // Verify the path exists before returning it
+        const customPath = result.value
+        if (fs.existsSync(path.dirname(customPath))) {
+          return customPath
+        }
+      }
+      
+      return null
+    } catch (error: any) {
+      console.error('Error getting stored database path:', error)
+      return null
+    }
+  }
+
+  // Change the database location
+  public changeDbLocation(newPath: string): boolean {
+    try {
+      if (this.dbPath === newPath) {
+        return true // No change needed
+      }
+      
+      // Close current database connection
+      this.db.close()
+      
+      // Ensure the target directory exists
+      const dir = path.dirname(newPath)
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true })
+      }
+      
+      // Copy the database file to the new location
+      if (fs.existsSync(this.dbPath)) {
+        fs.copyFileSync(this.dbPath, newPath)
+      }
+      
+      // Update current path
+      const oldPath = this.dbPath
+      this.dbPath = newPath
+      this.isCustomPath = true
+      
+      // Initialize with the new database path
+      this.initializeDatabase()
+      
+      // Save the new path in settings
+      this.updateSetting('database', 'customPath', newPath)
+      this.updateSetting('database', 'isCustomPath', 'true')
+      
+      // Return success
+      console.log(`Database successfully moved from ${oldPath} to ${newPath}`)
+      return true
+    } catch (error) {
+      console.error('Error changing database location:', error)
+      
+      // Try to revert to the original path
+      try {
+        this.initializeDatabase()
+      } catch (initError) {
+        console.error('Failed to reinitialize original database:', initError)
+      }
+      
+      return false
+    }
+  }
+
+  // Reset to default database location
+  public resetToDefaultLocation(): boolean {
+    try {
+      // Get default path
+      const defaultPath = path.join(app.getPath('userData'), 'mothercore.db')
+      
+      // Skip if already using default
+      if (this.dbPath === defaultPath) {
+        return true
+      }
+      
+      // Close current connection
+      this.db.close()
+      
+      // Copy the database if needed
+      if (this.isCustomPath && fs.existsSync(this.dbPath)) {
+        fs.copyFileSync(this.dbPath, defaultPath)
+      }
+      
+      // Update path
+      this.dbPath = defaultPath
+      this.isCustomPath = false
+      
+      // Initialize the database with default path
+      this.initializeDatabase()
+      
+      // Update settings
+      this.updateSetting('database', 'customPath', '')
+      this.updateSetting('database', 'isCustomPath', 'false')
+      
+      return true
+    } catch (error) {
+      console.error('Error resetting to default database location:', error)
+      return false
+    }
+  }
+
+  // Get current database path
+  public getCurrentDbPath(): string {
+    return this.dbPath
+  }
+  
+  // Get database filename
+  public getDbFilename(): string {
+    return path.basename(this.dbPath)
+  }
+  
+  // Get database directory
+  public getDbDirectory(): string {
+    return path.dirname(this.dbPath)
+  }
+
+  // Check if using custom path
+  public isUsingCustomPath(): boolean {
+    return this.isCustomPath
   }
 
   private initializeTables() {
@@ -100,7 +286,9 @@ class DatabaseManager {
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         description TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        icon TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `).run()
 
@@ -255,17 +443,17 @@ class DatabaseManager {
   public createOrganization(organization: Organization) {
     console.log('DatabaseManager: Creating organization', organization);
     
-    const { id, name, description = null, color = null, icon = null } = organization
+    const { id, name, description = null, icon = null } = organization
     
     try {
       // Begin a transaction
       const transaction = this.db.transaction(() => {
         const stmt = this.db.prepare(`
-          INSERT INTO organizations (id, name, description, color, icon)
-          VALUES (?, ?, ?, ?, ?)
+          INSERT INTO organizations (id, name, description, icon)
+          VALUES (?, ?, ?, ?)
         `);
         
-        const result = stmt.run(id, name, description, color, icon);
+        const result = stmt.run(id, name, description, icon);
         console.log('Organization created in database with result:', result);
         
         // Verify organization was created
@@ -297,15 +485,15 @@ class DatabaseManager {
   }
   
   public updateOrganization(organization: Organization) {
-    const { id, name, description = null, color = null, icon = null } = organization
+    const { id, name, description = null, icon = null } = organization
     
     const stmt = this.db.prepare(`
       UPDATE organizations
-      SET name = ?, description = ?, color = ?, icon = ?, updated_at = CURRENT_TIMESTAMP
+      SET name = ?, description = ?, icon = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `)
     
-    return stmt.run(name, description, color, icon, id)
+    return stmt.run(name, description, icon, id)
   }
   
   public deleteOrganization(id: string) {
@@ -421,12 +609,26 @@ class DatabaseManager {
           throw new Error(`Project with ID ${project_id} does not exist`);
         }
         
+        // If position is not provided, get the highest position number and add 1
+        let bookPosition = position;
+        if (bookPosition === null) {
+          const highestPosition = this.db.prepare(
+            'SELECT MAX(position) as maxPos FROM books WHERE project_id = ?'
+          ).get(project_id);
+          
+          bookPosition = highestPosition && highestPosition.maxPos !== null 
+            ? highestPosition.maxPos + 1 
+            : 0;
+          
+          console.log(`Auto-assigned position ${bookPosition} for new book`);
+        }
+        
         const stmt = this.db.prepare(`
           INSERT INTO books (id, project_id, name, description, cover_image, spine_color, position)
           VALUES (?, ?, ?, ?, ?, ?, ?)
         `);
         
-        const result = stmt.run(id, project_id, name, description, cover_image, spine_color, position);
+        const result = stmt.run(id, project_id, name, description, cover_image, spine_color, bookPosition);
         console.log('Book created in database with result:', result);
         
         // Verify book was created
@@ -767,6 +969,22 @@ class DatabaseManager {
     
     try {
       const transaction = this.db.transaction(() => {
+        // Check if organizations table has icon column
+        try {
+          this.db.prepare('SELECT icon FROM organizations LIMIT 1').get();
+        } catch (error) {
+          console.log("Adding icon column to organizations table...");
+          this.db.prepare('ALTER TABLE organizations ADD COLUMN icon TEXT').run();
+        }
+
+        // Check if organizations table has updated_at column
+        try {
+          this.db.prepare('SELECT updated_at FROM organizations LIMIT 1').get();
+        } catch (error) {
+          console.log("Adding updated_at column to organizations table...");
+          this.db.prepare('ALTER TABLE organizations ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP').run();
+        }
+        
         // Fix organizations with null IDs
         const orgsWithNullId = this.db.prepare('SELECT * FROM organizations WHERE id IS NULL').all();
         for (const org of orgsWithNullId) {

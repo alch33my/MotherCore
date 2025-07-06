@@ -1,6 +1,7 @@
 import React from 'react'
 import { useState, useEffect } from 'react'
-import { ChevronRightIcon, ChevronDownIcon, FolderIcon, BookIcon, FileIcon, FileTextIcon, PlusIcon, RefreshCwIcon, InfoIcon } from 'lucide-react'
+import { ChevronRightIcon, ChevronDownIcon, FolderIcon, FileIcon, FileTextIcon, PlusIcon, RefreshCwIcon, InfoIcon } from 'lucide-react'
+import Icon from '../ui/Icon'
 
 interface NavigationTreeProps {
   onSelectOrganization: (item: any) => void
@@ -334,20 +335,31 @@ function NavigationTree({
   function handleSelect(node: TreeNode) {
     console.log(`Selected ${node.type} ${node.name} (${node.id})`)
     
-    // Create a complete item object with all necessary parent references
-    const item = {
-      ...node,
-      // For projects, ensure organization_id is included
-      ...(node.type === 'project' && node.parentId && { organization_id: node.parentId }),
-      // For books, ensure project_id is included
-      ...(node.type === 'book' && node.parentId && { project_id: node.parentId }),
-      // For chapters, ensure book_id is included
-      ...(node.type === 'chapter' && node.parentId && { book_id: node.parentId }),
-      // For pages, ensure chapter_id is included
-      ...(node.type === 'page' && node.parentId && { chapter_id: node.parentId })
+    // Create a clean item object with only the necessary properties
+    // This prevents issues with circular references or complex objects
+    const item: Record<string, any> = {
+      id: node.id,
+      name: node.name,
+      type: node.type,
+      color: node.color,
+      icon: node.icon
     }
     
-    console.log(`Enhanced item for selection:`, item)
+    // Add parent references based on node type
+    if (node.type === 'project' && node.parentId) {
+      item.organization_id = node.parentId
+    } 
+    else if (node.type === 'book' && node.parentId) {
+      item.project_id = node.parentId
+    }
+    else if (node.type === 'chapter' && node.parentId) {
+      item.book_id = node.parentId
+    }
+    else if (node.type === 'page' && node.parentId) {
+      item.chapter_id = node.parentId
+    }
+    
+    console.log(`Clean item for selection:`, item)
     
     switch (node.type) {
       case 'organization':
@@ -394,7 +406,7 @@ function NavigationTree({
       case 'project':
         return <FolderIcon size={16} style={{ color: color || '#ffb000' }} />
       case 'book':
-        return <BookIcon size={16} style={{ color: color || '#ffd700' }} />
+        return <Icon name="book-icon-greys" size={16} />
       case 'chapter':
         return <FileIcon size={16} className="text-matrix-gold" />
       case 'page':

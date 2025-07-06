@@ -1,6 +1,6 @@
 import React from 'react'
 import { useState } from 'react'
-import { SaveIcon, XIcon } from 'lucide-react'
+import { SaveIcon, XIcon, FileText } from 'lucide-react'
 
 interface CreateChapterFormProps {
   bookId: string
@@ -58,83 +58,96 @@ function CreateChapterForm({ bookId, onClose, onSuccess }: CreateChapterFormProp
   }
 
   return (
-    <div className="bg-matrix-dark-gray p-6 rounded-lg border border-matrix-green shadow-lg w-96">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold text-matrix-gold">New Chapter</h2>
-        <button 
-          onClick={onClose}
-          className="text-matrix-amber hover:text-matrix-gold transition-colors"
-        >
-          <XIcon size={20} />
-        </button>
-      </div>
-      
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="chapterName" className="block text-sm text-matrix-amber mb-1">
-            Name <span className="text-matrix-error">*</span>
-          </label>
-          <input
-            id="chapterName"
-            type="text"
-            value={chapterName}
-            onChange={(e) => setChapterName(e.target.value)}
-            placeholder="Chapter name"
-            className="w-full bg-matrix-black border border-matrix-green p-2 rounded text-matrix-green focus:border-matrix-gold focus:outline-none"
-          />
-        </div>
-        
-        <div>
-          <label htmlFor="position" className="block text-sm text-matrix-amber mb-1">
-            Position
-          </label>
-          <input
-            id="position"
-            type="number"
-            value={position}
-            onChange={(e) => setPosition(e.target.value)}
-            placeholder="0"
-            min="0"
-            className="w-full bg-matrix-black border border-matrix-green p-2 rounded text-matrix-green focus:border-matrix-gold focus:outline-none"
-          />
-          <p className="text-matrix-green text-xs mt-1 opacity-70">
-            The order this chapter appears in the book (0 = first)
-          </p>
-        </div>
-        
-        {error && (
-          <div className="text-matrix-error text-sm">{error}</div>
-        )}
-        
-        <div className="form-buttons">
-          <button
-            type="button"
+    <div className="modal-overlay">
+      <div className="modal-container">
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-matrix-blue bg-opacity-10 flex items-center justify-center">
+              <FileText size={24} className="text-matrix-blue" />
+            </div>
+            <h2 className="text-2xl font-bold text-matrix-gold">New Chapter</h2>
+          </div>
+          
+          <button 
             onClick={onClose}
-            className="btn btn-secondary"
+            className="text-matrix-amber hover:text-matrix-gold transition-colors rounded-full hover:bg-matrix-gold/10 p-1"
             disabled={isSubmitting}
           >
-            <XIcon size={16} className="mr-2" />
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="btn btn-primary"
-          >
-            {isSubmitting ? (
-              <>
-                <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin mr-2"></div>
-                Creating...
-              </>
-            ) : (
-              <>
-                <SaveIcon size={16} className="mr-2" />
-                Create Chapter
-              </>
-            )}
+            <XIcon size={20} />
           </button>
         </div>
-      </form>
+        
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label htmlFor="chapterName" className="form-label">
+              Name <span className="text-matrix-error">*</span>
+            </label>
+            <input
+              id="chapterName"
+              type="text"
+              value={chapterName}
+              onChange={(e) => setChapterName(e.target.value)}
+              placeholder="Chapter name"
+              className="form-input"
+              autoFocus
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="position" className="form-label">
+              Position
+            </label>
+            <input
+              id="position"
+              type="number"
+              value={position}
+              onChange={(e) => setPosition(e.target.value)}
+              placeholder="0"
+              min="0"
+              className="form-input"
+            />
+            <p className="text-matrix-green text-xs mt-1 opacity-70">
+              The order this chapter appears in the book (0 = first)
+            </p>
+          </div>
+          
+          {error && (
+            <div className="text-matrix-error text-sm bg-matrix-error bg-opacity-10 p-3 rounded-lg border border-matrix-error border-opacity-30 flex items-center gap-2">
+              <XIcon size={16} className="flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+          
+          <div className="form-buttons">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn btn-secondary"
+              disabled={isSubmitting}
+            >
+              <XIcon size={16} className="mr-2" />
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="btn btn-primary"
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <SaveIcon size={16} className="mr-2" />
+                  Create Chapter
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   )
 }

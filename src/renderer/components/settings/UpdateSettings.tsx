@@ -82,7 +82,7 @@ function UpdateSettings({ onClose }: UpdateSettingsProps) {
     setChecking(true)
     setStatusMessage('Checking for updates...')
     
-    const result = await window.electronAPI.checkForUpdates(true)
+    const result = await window.electronAPI.checkForUpdates()
     setChecking(false)
     
     if (result.success && result.updateInfo) {

@@ -1,9 +1,12 @@
-import React from 'react'
+import React, { useState } from 'react'
 // No imports needed for useState
-import { useThemeContext } from '../../context/ThemeContext'
+import { useTheme } from '../../context/ThemeContext'
+import type { DesignStyle, ColorTheme } from '../../hooks/useTheme'
 
 function ThemeSettings() {
-  const { themeConfig, colorThemes, designStyles, setColorTheme, setDesignStyle } = useThemeContext()
+  const { themeConfig, colorThemes, designStyles, setColorTheme, setDesignStyle } = useTheme()
+  const [selectedColorTheme, setSelectedColorTheme] = useState<string>('')
+  const [selectedDesignStyle, setSelectedDesignStyle] = useState<string>('')
 
   return (
     <div className="settings-section">
@@ -15,7 +18,7 @@ function ThemeSettings() {
           Design Style
         </label>
         <div className="grid gap-3">
-          {designStyles.map((style) => (
+          {designStyles.map((style: DesignStyle) => (
             <div
               key={style.id}
               className={`p-4 border rounded-lg cursor-pointer transition-all ${
@@ -54,7 +57,7 @@ function ThemeSettings() {
           Color Theme
         </label>
         <div className="grid grid-cols-2 gap-3">
-          {colorThemes.map((theme) => (
+          {colorThemes.map((theme: ColorTheme) => (
             <div
               key={theme.id}
               className={`p-4 border rounded-lg cursor-pointer transition-all ${

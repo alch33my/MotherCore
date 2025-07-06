@@ -1,7 +1,6 @@
 import React from 'react'
 import { useEffect, useState, useCallback } from 'react'
-import './App.css'
-import './renderer/styles/premium-ui.css' // Import premium UI styles
+import './index.css' // Single CSS import that includes premium-ui.css
 import MatrixRain from './renderer/components/effects/matrix-rain'
 import { AlertTriangleIcon, CheckCircleIcon } from 'lucide-react'
 import Sidebar from './renderer/components/navigation/Sidebar'
@@ -18,6 +17,7 @@ import CreateBookForm from './renderer/components/books/create-book-form'
 import CreateChapterForm from './renderer/components/chapters/create-chapter-form'
 import CreatePageForm from './renderer/components/content/create-page-form'
 import ChatPanel from './renderer/components/layout/ChatPanel'
+import MainLayout from './renderer/components/layout/MainLayout'
 
 type Toast = {
   id: string
@@ -235,7 +235,7 @@ function App() {
   }
   
   // Handle authentication from AuthScreen component
-  const handleAuthenticated = async (password: string) => {
+  const handleAuthenticated = async (password: string, dbPath?: string) => {
     if (!window.electronAPI) return
     
     try {
@@ -243,8 +243,8 @@ function App() {
       setAuthError('')
       
       if (authSetupNeeded) {
-        // Setup new auth
-        const result = await window.electronAPI.setupAuth(password)
+        // Setup new auth with optional custom DB path
+        const result = await window.electronAPI.setupAuth(password, dbPath)
         if (result.success) {
           setAuthSetupNeeded(false)
           setIsAuthenticated(true)
@@ -276,8 +276,6 @@ function App() {
   
   const handleSelectItem = (item: any, type: string) => {
     console.log(`Selecting ${type} with ID ${item.id}`, item);
-    setSelectedItem(item);
-    setSelectedType(type);
     
     // Update active IDs based on the type
     if (type === 'organization') {
@@ -315,6 +313,10 @@ function App() {
         setActiveBookId(item.book_id);
       }
     }
+    
+    // Set the selected item and type last to avoid race conditions
+    setSelectedType(type);
+    setSelectedItem(item);
   };
   
   const handleBackToLibrary = () => {
@@ -346,10 +348,11 @@ function App() {
   // Add state for chat panel visibility
   const [isChatOpen, setIsChatOpen] = useState(false);
 
-  // Add toggle function for chat panel
-  const toggleChat = () => {
+  // Fix chat toggle function
+  const toggleChat = useCallback(() => {
     setIsChatOpen(prev => !prev);
-  };
+    console.log('Chat toggled:', !isChatOpen);
+  }, [isChatOpen]);
 
   function renderToasts() {
     return (
@@ -399,92 +402,94 @@ function App() {
 
   function renderMainApplication() {
     return (
-      <ThemeProvider>
-        <div className="app-container">
-          {/* Matrix Rain Background */}
-          <div className="matrix-background">
-            <MatrixRain 
-              intensity={matrixSettings.intensity}
-              speed={matrixSettings.speed}
-              colorScheme={matrixSettings.colorScheme}
-              density={matrixSettings.density}
-            />
-          </div>
+      <div className="app-container">
+        {/* Matrix Background */}
+        <div className="matrix-background">
+          <MatrixRain 
+            intensity={70}
+            speed={50}
+            colorScheme="gold"
+            density={0.8}
+            theme="dark"
+          />
+        </div>
+        
+        {/* Title Bar */}
+        <TitleBar 
+          onSettingsClick={handleSettingsClick}
+          onDebugRefresh={forceRefresh}
+          currentUser="Knowledge Keeper"
+        />
+        
+        {/* Main Layout */}
+        <div className={`main-layout ${isChatOpen ? 'has-chat' : ''}`}>
+          {/* Sidebar */}
+          <Sidebar 
+            onSelectItem={handleSelectItem}
+            onBackToLibrary={handleBackToLibrary}
+            selectedOrganization={selectedOrganization}
+            isLibraryView={isLibraryView}
+            onCreateOrganization={() => setShowCreateOrgForm(true)}
+            onCreateProject={() => setShowCreateProjectForm(true)}
+            onCreateBook={() => setShowCreateBookForm(true)}
+            onCreateChapter={() => setShowCreateChapterForm(true)}
+            onCreatePage={() => setShowCreatePageForm(true)}
+          />
           
-          {/* Main App Content */}
-          <div className="app-content">
-            {/* Title Bar */}
-            <TitleBar 
-              onSettingsClick={handleSettingsClick}
-              onDebugRefresh={forceRefresh}
-              currentUser="Knowledge Keeper"
+          {/* Main Content Area */}
+          <div className="content-container">
+            <MainContent 
+              selectedItem={selectedItem}
+              selectedType={selectedType}
+              onEditorStatsChange={handleEditorStatsChange}
+              currentTime={currentTime}
+              wordCount={wordCount}
+              charCount={charCount}
+              onRefreshContent={handleRefreshContent}
+              onSelectItem={handleSelectItem}
+              onAddProject={(orgId) => {
+                setActiveOrgId(orgId);
+                setShowCreateProjectForm(true);
+              }}
+              onAddBook={(projectId) => {
+                setActiveProjectId(projectId);
+                setShowCreateBookForm(true);
+              }}
+              onAddChapter={(bookId) => {
+                setActiveBookId(bookId);
+                setShowCreateChapterForm(true);
+              }}
+              onAddPage={(chapterId) => {
+                setActiveChapterId(chapterId);
+                setShowCreatePageForm(true);
+              }}
+              onCreateOrganization={() => setShowCreateOrgForm(true)}
             />
             
-            {/* Main Content */}
-            <div className={`main-content-layout ${isChatOpen ? 'chat-open' : ''}`}>
-              {/* Sidebar */}
-              <Sidebar 
-                onSelectItem={handleSelectItem}
-                onBackToLibrary={handleBackToLibrary}
-                selectedOrganization={selectedOrganization}
-                isLibraryView={isLibraryView}
-                onCreateOrganization={() => setShowCreateOrgForm(true)}
-                onCreateProject={() => setShowCreateProjectForm(true)}
-                onCreateBook={() => setShowCreateBookForm(true)}
-                onCreateChapter={() => setShowCreateChapterForm(true)}
-                onCreatePage={() => setShowCreatePageForm(true)}
-              />
-              
-              {/* Main Content Area */}
-              <div className="content-area">
-                <MainContent 
-                  selectedItem={selectedItem}
-                  selectedType={selectedType}
-                  onEditorStatsChange={handleEditorStatsChange}
-                  currentTime={currentTime}
-                  wordCount={wordCount}
-                  charCount={charCount}
-                  onRefreshContent={handleRefreshContent}
-                  onAddProject={(orgId) => {
-                    setActiveOrgId(orgId);
-                    setShowCreateProjectForm(true);
-                  }}
-                  onAddBook={(projectId) => {
-                    setActiveProjectId(projectId);
-                    setShowCreateBookForm(true);
-                  }}
-                  onAddChapter={(bookId) => {
-                    setActiveBookId(bookId);
-                    setShowCreateChapterForm(true);
-                  }}
-                  onAddPage={(chapterId) => {
-                    setActiveChapterId(chapterId);
-                    setShowCreatePageForm(true);
-                  }}
+            {/* Chat Panel */}
+            {isChatOpen && (
+              <div className="chat-panel">
+                <ChatPanel 
+                  isOpen={isChatOpen} 
+                  onClose={() => setIsChatOpen(false)} 
                 />
               </div>
-              
-              {/* Chat Panel */}
-              <ChatPanel 
-                isOpen={isChatOpen} 
-                onClose={() => setIsChatOpen(false)} 
-              />
-            </div>
-            
-            {/* Bottom Bar */}
-            <BottomBar 
-              stats={{
-                organizations: stats.organizations,
-                projects: stats.projects,
-                books: 0, // Use default value if not available
-                chapters: 0, // Use default value if not available
-                notes: stats.notes,
-                storage: stats.storage
-              }}
-              onToggleChat={toggleChat}
-              isChatOpen={isChatOpen}
-            />
+            )}
           </div>
+          
+          {/* Bottom Bar */}
+          <BottomBar 
+            stats={{
+              organizations: stats.organizations,
+              projects: stats.projects,
+              books: 0,
+              chapters: 0,
+              notes: stats.notes,
+              storage: stats.storage
+            }}
+            onToggleChat={toggleChat}
+            isChatOpen={isChatOpen}
+          />
           
           {/* Settings Page */}
           {showSettings && (
@@ -558,45 +563,28 @@ function App() {
           {/* Toast Notifications */}
           {renderToasts()}
         </div>
-      </ThemeProvider>
+      </div>
     );
   }
 
-  // Show loading state while checking authentication status
-  if (isLoading && !isAuthenticated) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-matrix-black">
-        <MatrixRain colorScheme="gold" />
-        <div className="z-10 text-white text-xl">Initializing MotherCore...</div>
-      </div>
-    )
-  }
-
-  // Show preload error screen if electronAPI is not available
-  if (preloadError) {
-    return (
-      <>
-        {renderPreloadErrorScreen()}
-      </>
-    )
-  }
-
-  // If not authenticated, show AuthScreen with appropriate mode
-  if (!isAuthenticated) {
-    return (
-      <>
+  return (
+    <ThemeProvider>
+      {isLoading && !isAuthenticated ? (
+        <div className="fixed inset-0 flex items-center justify-center bg-matrix-black">
+          <MatrixRain colorScheme="gold" theme="dark" />
+          <div className="z-10 text-white text-xl">Initializing MotherCore...</div>
+        </div>
+      ) : preloadError ? (
+        renderPreloadErrorScreen()
+      ) : !isAuthenticated ? (
         <AuthScreen 
           onAuthenticated={handleAuthenticated}
           isSignUp={authSetupNeeded}
           error={authError}
         />
-      </>
-    )
-  }
-
-  return (
-    <ThemeProvider>
-      {renderMainApplication()}
+      ) : (
+        renderMainApplication()
+      )}
     </ThemeProvider>
   )
 }

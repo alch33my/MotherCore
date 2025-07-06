@@ -27,6 +27,13 @@ function createWindow() {
     : path.join(__dirname, '../../dist-electron/preload/preload.js')
   
   console.log('Using preload script at:', preloadPath)
+
+  // Resolve icon path based on environment
+  const iconPath = app.isPackaged
+    ? path.join(process.resourcesPath, 'Images/SVG/app-icon-main.png')
+    : path.join(__dirname, '../../Images/SVG/app-icon-main.png')
+
+  console.log('Using app icon at:', iconPath)
   
   // Create the browser window.
   mainWindow = new BrowserWindow({
@@ -39,6 +46,7 @@ function createWindow() {
     },
     frame: false,
     titleBarStyle: 'hidden',
+    icon: iconPath
   })
 
   // Load the app - use VITE_DEV_SERVER_URL in dev, file:// in production
@@ -69,6 +77,15 @@ function createWindow() {
   ipcMain.handle('window-close', () => {
     mainWindow?.close()
   })
+
+  // Add event listeners for maximize and unmaximize events
+  mainWindow.on('maximize', () => {
+    mainWindow?.webContents.send('window-maximize-change', true);
+  });
+
+  mainWindow.on('unmaximize', () => {
+    mainWindow?.webContents.send('window-maximize-change', false);
+  });
 
   // Open dev tools to help with debugging
   mainWindow.webContents.openDevTools()
@@ -391,4 +408,111 @@ function setupIpcHandlers() {
     await shell.openExternal(url)
     return true
   })
+
+  // Database location handlers
+  ipcMain.handle('get-database-location', async () => {
+    try {
+      return { 
+        success: true, 
+        path: dbManager.getCurrentDbPath(),
+        isCustom: dbManager.isUsingCustomPath(),
+        directory: dbManager.getDbDirectory(),
+        filename: dbManager.getDbFilename()
+      }
+    } catch (err) {
+      console.error('Error getting database location:', err)
+      return { success: false, error: 'Failed to get database location' }
+    }
+  })
+
+  ipcMain.handle('change-database-location', async (_, newPath: string) => {
+    try {
+      const success = dbManager.changeDbLocation(newPath)
+      if (success) {
+        return { 
+          success: true, 
+          path: dbManager.getCurrentDbPath() 
+        }
+      } else {
+        return { success: false, error: 'Failed to change database location' }
+      }
+    } catch (err) {
+      console.error('Error changing database location:', err)
+      return { success: false, error: `Failed to change database location: ${err}` }
+    }
+  })
+
+  ipcMain.handle('reset-database-location', async () => {
+    try {
+      const success = dbManager.resetToDefaultLocation()
+      if (success) {
+        return { 
+          success: true, 
+          path: dbManager.getCurrentDbPath() 
+        }
+      } else {
+        return { success: false, error: 'Failed to reset database location' }
+      }
+    } catch (err) {
+      console.error('Error resetting database location:', err)
+      return { success: false, error: `Failed to reset database location: ${err}` }
+    }
+  })
+
+  // Directory selection handler
+  ipcMain.handle('select-directory', async () => {
+    try {
+      const result = await dialog.showOpenDialog(mainWindow!, {
+        properties: ['openDirectory'],
+        title: 'Select Database Location'
+      })
+      
+      if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+        return { success: false, canceled: true }
+      }
+      
+      return { success: true, path: result.filePaths[0] }
+    } catch (err) {
+      console.error('Error selecting directory:', err)
+      return { success: false, error: 'Failed to select directory' }
+    }
+  })
+
+  // SVG icon file reader
+  ipcMain.handle('read-svg-file', async (_, filePath: string) => {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      
+      // Ensure filePath is safe by resolving it against the app root directory
+      const appPath = app.getAppPath();
+      const resolvedPath = path.resolve(appPath, filePath);
+      
+      // Verify the file is within the app's directory (security check)
+      if (!resolvedPath.startsWith(appPath)) {
+        throw new Error('Access denied: Attempted to access file outside app directory');
+      }
+      
+      // Check if file exists
+      if (!fs.existsSync(resolvedPath)) {
+        console.error(`SVG file not found: ${resolvedPath}`);
+        return { success: false, error: 'SVG file not found' };
+      }
+      
+      // Read the SVG file
+      const content = fs.readFileSync(resolvedPath, 'utf8');
+      
+      // Verify this is actually an SVG file by checking for svg tag
+      if (!content.includes('<svg') || !content.includes('</svg>')) {
+        console.error(`File is not a valid SVG: ${resolvedPath}`);
+        return { success: false, error: 'Not a valid SVG file' };
+      }
+      
+      console.log(`Successfully loaded SVG file: ${filePath}`);
+      return { success: true, content };
+    } catch (err) {
+      console.error('Error reading SVG file:', err);
+      return { success: false, error: String(err) };
+    }
+  });
 } 

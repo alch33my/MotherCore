@@ -9,11 +9,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
   minimizeWindow: () => ipcRenderer.invoke('window-minimize'),
   maximizeWindow: () => ipcRenderer.invoke('window-maximize'),
   closeWindow: () => ipcRenderer.invoke('window-close'),
+  onMaximizeChange: (callback) => {
+    ipcRenderer.on('window-maximize-change', (_, isMaximized) => callback(isMaximized))
+  },
+  offMaximizeChange: (callback) => {
+    ipcRenderer.removeListener('window-maximize-change', callback)
+  },
   
   // Authentication
   checkAuthStatus: () => ipcRenderer.invoke('check-auth-status'),
   setupAuth: (password) => ipcRenderer.invoke('setup-auth', password),
   authenticate: (password) => ipcRenderer.invoke('authenticate', password),
+  
+  // Database location management
+  getDatabaseLocation: () => ipcRenderer.invoke('get-database-location'),
+  changeDatabaseLocation: (newPath) => ipcRenderer.invoke('change-database-location', newPath),
+  resetDatabaseLocation: () => ipcRenderer.invoke('reset-database-location'),
+  selectDirectory: () => ipcRenderer.invoke('select-directory'),
   
   // Organizations
   getOrganizations: () => ipcRenderer.invoke('get-organizations'),
@@ -54,7 +66,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openExternalUrl: (url) => ipcRenderer.invoke('open-external-url', url),
   
   // Error logging
-  logError: (errorMessage) => ipcRenderer.invoke('log-error', errorMessage)
+  logError: (errorMessage) => ipcRenderer.invoke('log-error', errorMessage),
+  
+  // SVG icon loading
+  readSVGFile: (filePath) => ipcRenderer.invoke('read-svg-file', filePath)
 })
 
 console.log('Electron API exposed successfully') 

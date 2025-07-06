@@ -3,9 +3,11 @@ import { useState } from 'react';
 import type { FC } from 'react';;
 import { Eye, EyeOff, Lock, Shield } from 'lucide-react';
 import MatrixRain from '../effects/matrix-rain';
+import OnboardingFlow from './OnboardingFlow';
+import Icon from '../ui/Icon';
 
 interface AuthScreenProps {
-  onAuthenticated: (password: string) => void;
+  onAuthenticated: (password: string, dbPath?: string) => void;
   isSignUp?: boolean;
   error?: string;
 }
@@ -17,6 +19,7 @@ const AuthScreen: FC<AuthScreenProps> = ({ onAuthenticated, isSignUp = false, er
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showOnboarding, setShowOnboarding] = useState(isSignUp);
   
   // Use external error if provided
   const displayError = externalError || error;
@@ -28,14 +31,21 @@ const AuthScreen: FC<AuthScreenProps> = ({ onAuthenticated, isSignUp = false, er
     setError('');
     setIsLoading(true);
 
-    if (isNewUser && password !== confirmPassword) {
-      setError('Passwords do not match');
-      setIsLoading(false);
-      return;
-    }
+    if (isNewUser) {
+      if (password !== confirmPassword) {
+        setError('Passwords do not match');
+        setIsLoading(false);
+        return;
+      }
 
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+      if (password.length < 8) {
+        setError('Password must be at least 8 characters');
+        setIsLoading(false);
+        return;
+      }
+      
+      // Show onboarding flow for new users
+      setShowOnboarding(true);
       setIsLoading(false);
       return;
     }
@@ -51,12 +61,27 @@ const AuthScreen: FC<AuthScreenProps> = ({ onAuthenticated, isSignUp = false, er
       setIsLoading(false);
     }
   };
+  
+  // Handle onboarding completion
+  const handleOnboardingComplete = (password: string, dbPath: string) => {
+    onAuthenticated(password, dbPath);
+  };
+  
+  // Show onboarding flow if needed
+  if (showOnboarding) {
+    return (
+      <OnboardingFlow 
+        onComplete={handleOnboardingComplete}
+        onCancel={() => setShowOnboarding(false)}
+      />
+    );
+  }
 
   return (
     <div className="auth-screen">
       {/* Matrix Rain Background */}
       <div className="matrix-background">
-        <MatrixRain />
+        <MatrixRain theme="dark" />
       </div>
 
       {/* Auth Container */}
@@ -65,7 +90,7 @@ const AuthScreen: FC<AuthScreenProps> = ({ onAuthenticated, isSignUp = false, er
           {/* Header */}
           <div className="auth-header">
             <div className="auth-logo">
-              <div className="logo-symbol">⚡</div>
+              <Icon name="app-icon-main" size={48} className="logo-symbol" />
               <h1 className="logo-title">MOTHERCORE</h1>
             </div>
             <p className="auth-subtitle">

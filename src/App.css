@@ -1,3 +1,11 @@
+/*
+ * DEPRECATED: This CSS file is no longer in use. 
+ * All styles have been consolidated into premium-ui.css.
+ * The application now imports premium-ui.css via index.css.
+ * 
+ * Keep this file temporarily for compatibility.
+ */
+
 /* Reset and base styles */
 * {
   box-sizing: border-box;
