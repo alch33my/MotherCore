@@ -1,5 +1,4 @@
-import React, { useState, createContext, useContext } from 'react';
-import type { FC, ReactNode } from 'react';
+import React, { useState } from 'react';
 import { 
   Monitor, 
   Palette, 
@@ -17,99 +16,6 @@ import ThemeSettings from './ThemeSettings';
 import DatabaseLocationSettings from './DatabaseLocationSettings';
 import IconTester from '../ui/IconTester';
 
-// Create a context for tabs
-interface TabsContextType {
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
-}
-
-const TabsContext = createContext<TabsContextType | undefined>(undefined);
-
-interface TabsProps {
-  defaultValue: string;
-  children: ReactNode;
-  className?: string;
-}
-
-// Simple tabs implementation
-const Tabs: FC<TabsProps> = ({ defaultValue, children, className = '' }) => {
-  const [activeTab, setActiveTab] = useState(defaultValue);
-  
-  return (
-    <TabsContext.Provider value={{ activeTab, setActiveTab }}>
-      <div className={`mc-tabs ${className}`}>
-        {children}
-      </div>
-    </TabsContext.Provider>
-  );
-};
-
-interface TabsListProps {
-  children: ReactNode;
-  className?: string;
-}
-
-const TabsList: FC<TabsListProps> = ({ children, className = '' }) => {
-  return (
-    <div className={`mc-tabs-list ${className}`}>
-      {children}
-    </div>
-  );
-};
-
-interface TabsTriggerProps {
-  value: string;
-  children: ReactNode;
-  className?: string;
-}
-
-const TabsTrigger: FC<TabsTriggerProps> = ({ value, children, className = '' }) => {
-  const context = useContext(TabsContext);
-  
-  if (!context) {
-    throw new Error('TabsTrigger must be used within a Tabs component');
-  }
-  
-  const { activeTab, setActiveTab } = context;
-  const isActive = activeTab === value;
-  
-  return (
-    <button
-      className={`mc-tabs-trigger ${isActive ? 'active' : ''} ${className}`}
-      onClick={() => setActiveTab(value)}
-      type="button"
-    >
-      {children}
-    </button>
-  );
-};
-
-interface TabsContentProps {
-  value: string;
-  children: ReactNode;
-  className?: string;
-}
-
-const TabsContent: FC<TabsContentProps> = ({ value, children, className = '' }) => {
-  const context = useContext(TabsContext);
-  
-  if (!context) {
-    throw new Error('TabsContent must be used within a Tabs component');
-  }
-  
-  const { activeTab } = context;
-  
-  if (activeTab !== value) {
-    return null;
-  }
-  
-  return (
-    <div className={`mc-tabs-content ${className}`}>
-      {children}
-    </div>
-  );
-};
-
 interface MatrixSettings {
   intensity: number;
   speed: number;
@@ -124,10 +30,14 @@ interface SettingsPageProps {
   onMatrixSettingsChange: (settings: MatrixSettings) => void;
 }
 
-type SettingsTab = 'profile' | 'appearance' | 'updates' | 'security' | 'data' | 'system' | 'about';
+type SettingsSection = 'profile' | 'appearance' | 'updates' | 'security' | 'data' | 'system' | 'about';
 
-const SettingsPage: FC<SettingsPageProps> = ({ onClose, matrixSettings, onMatrixSettingsChange }) => {
-  const [activeTab, setActiveTab] = useState<SettingsTab>('appearance');
+const SettingsPage: React.FC<SettingsPageProps> = ({ 
+  onClose, 
+  matrixSettings, 
+  onMatrixSettingsChange 
+}) => {
+  const [activeSection, setActiveSection] = useState<SettingsSection>('appearance');
   const [settings, setSettings] = useState({
     theme: 'cyberpunk',
     matrixSpeed: 50,
@@ -144,22 +54,22 @@ const SettingsPage: FC<SettingsPageProps> = ({ onClose, matrixSettings, onMatrix
   const [isSaving, setIsSaving] = useState(false);
   const [showIconTester, setShowIconTester] = useState(false);
 
-  const tabs: { id: SettingsTab; label: string; icon: React.ElementType }[] = [
-    { id: 'profile', label: 'Profile', icon: User },
-    { id: 'appearance', label: 'Appearance', icon: Palette },
-    { id: 'updates', label: 'Updates', icon: Download },
-    { id: 'security', label: 'Security', icon: Shield },
-    { id: 'data', label: 'Data & Backup', icon: Database },
-    { id: 'system', label: 'System', icon: Monitor },
-    { id: 'about', label: 'About', icon: Info },
+  const navigationItems = [
+    { id: 'profile' as SettingsSection, label: 'Profile', icon: User },
+    { id: 'appearance' as SettingsSection, label: 'Appearance', icon: Palette },
+    { id: 'updates' as SettingsSection, label: 'Updates', icon: Download },
+    { id: 'security' as SettingsSection, label: 'Security', icon: Shield },
+    { id: 'data' as SettingsSection, label: 'Data & Backup', icon: Database },
+    { id: 'system' as SettingsSection, label: 'System', icon: Monitor },
+    { id: 'about' as SettingsSection, label: 'About', icon: Info }
   ];
 
   const updateSetting = (key: string, value: any) => {
     setSettings(prev => ({ ...prev, [key]: value }));
   };
 
-  const renderTabContent = () => {
-    switch (activeTab) {
+  const renderContent = () => {
+    switch (activeSection) {
       case 'profile':
         return (
           <div className="settings-content">
@@ -191,7 +101,6 @@ const SettingsPage: FC<SettingsPageProps> = ({ onClose, matrixSettings, onMatrix
                   onClick={async () => {
                     setIsSaving(true);
                     try {
-                      // Save profile data to local storage or backend
                       localStorage.setItem('mothercore-profile', JSON.stringify(profileData));
                       alert('Profile saved successfully!');
                     } catch (err) {
@@ -300,11 +209,29 @@ const SettingsPage: FC<SettingsPageProps> = ({ onClose, matrixSettings, onMatrix
                 />
               </div>
             </div>
+
+            <div className="settings-section">
+              <h2 className="settings-section-title">Icons</h2>
+              <div className="settings-section-content">
+                <button 
+                  className="button primary" 
+                  onClick={() => setShowIconTester(prev => !prev)}
+                >
+                  {showIconTester ? 'Hide Icon Tester' : 'Show Icon Tester'}
+                </button>
+                
+                {showIconTester && (
+                  <div className="icon-tester-container">
+                    <IconTester onClose={() => setShowIconTester(false)} />
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         );
 
       case 'updates':
-        return <UpdateSettings onClose={() => setActiveTab('appearance')} />;
+        return <UpdateSettings onClose={() => setActiveSection('appearance')} />;
 
       case 'security':
         return (
@@ -330,7 +257,6 @@ const SettingsPage: FC<SettingsPageProps> = ({ onClose, matrixSettings, onMatrix
           <div className="settings-content">
             <h3 className="settings-section-title">Data Management</h3>
             
-            {/* Database Location Section */}
             <div className="setting-group mt-4 mb-8 p-4 bg-matrix-black/30 border border-matrix-amber/20 rounded-lg">
               <h4 className="text-matrix-gold text-lg mb-4 flex items-center">
                 <Database size={18} className="mr-2" />
@@ -358,7 +284,6 @@ const SettingsPage: FC<SettingsPageProps> = ({ onClose, matrixSettings, onMatrix
                         });
                         
                         if (!result.canceled && result.filePath) {
-                          // In a real implementation, you'd export the data here
                           console.log('Would export data to:', result.filePath);
                           alert('Export functionality coming soon!');
                         }
@@ -391,7 +316,6 @@ const SettingsPage: FC<SettingsPageProps> = ({ onClose, matrixSettings, onMatrix
                         });
                         
                         if (!result.canceled && result.filePaths && result.filePaths.length > 0) {
-                          // In a real implementation, you'd import the data here
                           console.log('Would import data from:', result.filePaths[0]);
                           alert('Import functionality coming soon!');
                         }
@@ -487,124 +411,64 @@ const SettingsPage: FC<SettingsPageProps> = ({ onClose, matrixSettings, onMatrix
             </div>
           </div>
         );
-
-      default:
-        return null;
     }
   };
 
   return (
-    <div className="settings-overlay">
-      <div className="settings-container">
-        {/* Header */}
-        <div className="settings-header">
-          <div className="flex items-center">
-            <SettingsIcon className="w-5 h-5 mr-2" />
-            <h2>MotherCore Settings</h2>
-          </div>
-          <button onClick={onClose} className="settings-close">
-            <X className="w-5 h-5" />
-          </button>
+    <div className="settings-page">
+      <div className="settings-header">
+        <div className="flex items-center">
+          <SettingsIcon className="w-5 h-5 mr-2" />
+          <h2>Settings</h2>
         </div>
+        <button onClick={onClose} className="settings-close">
+          <X className="w-5 h-5" />
+        </button>
+      </div>
 
-        <div className="settings-body">
-          {/* Sidebar */}
-          <div className="settings-sidebar">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as SettingsTab)}
-                  className={`settings-tab ${activeTab === tab.id ? 'active' : ''}`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
+      <div className="settings-layout">
+        <nav className="settings-nav">
+          {navigationItems.map(item => (
+            <button
+              key={item.id}
+              className={`settings-nav-item ${activeSection === item.id ? 'active' : ''}`}
+              onClick={() => setActiveSection(item.id)}
+            >
+              <item.icon className="w-4 h-4 mr-2" />
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </nav>
 
-          {/* Content */}
-          <div className="settings-main">
-            <Tabs defaultValue="appearance">
-              <TabsList>
-                <TabsTrigger value="appearance">Appearance</TabsTrigger>
-                <TabsTrigger value="database">Database</TabsTrigger>
-                <TabsTrigger value="updates">Updates</TabsTrigger>
-                <TabsTrigger value="advanced">Advanced</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="appearance">
-            {renderTabContent()}
-                
-                <div className="settings-section">
-                  <h2 className="settings-section-title">Icons</h2>
-                  <div className="settings-section-content">
-                    <button 
-                      className="button primary" 
-                      onClick={() => setShowIconTester(prev => !prev)}
-                    >
-                      {showIconTester ? 'Hide Icon Tester' : 'Show Icon Tester'}
-                    </button>
-                    
-                    {showIconTester && (
-                      <div className="icon-tester-container">
-                        <IconTester onClose={() => setShowIconTester(false)} />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="database">
-                <DatabaseLocationSettings />
-              </TabsContent>
-              
-              <TabsContent value="updates">
-                <UpdateSettings onClose={() => console.log('Update settings closed')} />
-              </TabsContent>
-              
-              <TabsContent value="advanced">
-                <div className="settings-section">
-                  <h2 className="settings-section-title">Advanced Settings</h2>
-                  <div className="settings-section-content">
-                    <p>Advanced settings will be available in future versions.</p>
-                  </div>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </div>
+        <div className="settings-content-container">
+          {renderContent()}
         </div>
+      </div>
 
-        {/* Footer */}
-        <div className="settings-footer">
-          <button 
-            onClick={async () => {
-              setIsSaving(true);
-              try {
-                // Save all settings
-                localStorage.setItem('mothercore-settings', JSON.stringify(settings));
-                localStorage.setItem('mothercore-matrix-settings', JSON.stringify(matrixSettings));
-                localStorage.setItem('mothercore-profile', JSON.stringify(profileData));
-                
-                // Brief delay to show saving state
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                onClose();
-              } catch (err) {
-                console.error('Failed to save settings:', err);
-                alert('Failed to save settings. Please try again.');
-              } finally {
-                setIsSaving(false);
-              }
-            }}
-            className="btn btn-primary"
-            disabled={isSaving}
-          >
-            {isSaving ? 'Saving...' : 'Save Changes'}
-          </button>
-        </div>
+      <div className="settings-footer">
+        <button 
+          onClick={async () => {
+            setIsSaving(true);
+            try {
+              localStorage.setItem('mothercore-settings', JSON.stringify(settings));
+              localStorage.setItem('mothercore-matrix-settings', JSON.stringify(matrixSettings));
+              localStorage.setItem('mothercore-profile', JSON.stringify(profileData));
+              
+              await new Promise(resolve => setTimeout(resolve, 500));
+              
+              onClose();
+            } catch (err) {
+              console.error('Failed to save settings:', err);
+              alert('Failed to save settings. Please try again.');
+            } finally {
+              setIsSaving(false);
+            }
+          }}
+          className="btn btn-primary"
+          disabled={isSaving}
+        >
+          {isSaving ? 'Saving...' : 'Save Changes'}
+        </button>
       </div>
     </div>
   );

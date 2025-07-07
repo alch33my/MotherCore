@@ -98,6 +98,7 @@ input, textarea {
   width: 100vw;
   background: var(--color-background);
   overflow: hidden;
+  position: relative; /* For absolute positioning of children */
 }
 
 .matrix-background {
@@ -115,7 +116,7 @@ input, textarea {
   top: 0;
   left: 0;
   right: 0;
-  height: 40px;
+  height: 48px; /* Match margin-top in main-layout */
   z-index: 100;
   background: color-mix(in srgb, var(--color-surface) 95%, var(--color-primary) 5%);
   border-bottom: 1px solid var(--color-border);
@@ -130,7 +131,7 @@ input, textarea {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 30px;
+  height: 32px; /* Match margin-bottom in main-layout */
   z-index: 100;
   background: color-mix(in srgb, var(--color-surface) 95%, var(--color-primary) 5%);
   border-top: 1px solid var(--color-border);
@@ -141,57 +142,276 @@ input, textarea {
 
 /* Main layout - fills space between bars */
 .main-layout {
-  display: flex;
-  flex: 1;
-  margin-top: 40px; /* Title bar height */
-  margin-bottom: 30px; /* Bottom bar height */
-  height: calc(100vh - 70px); /* 40px top + 30px bottom */
+  display: grid;
+  grid-template-columns: 250px 1fr;  /* Default to 2 columns when chat is closed */
+  height: calc(100vh - 80px);
   width: 100%;
-  overflow: hidden;
+  position: relative;
+  margin-top: 48px;
+  margin-bottom: 32px;
 }
 
-/* New container for content and chat */
+/* When chat is open, switch to 3 columns */
+.main-layout.has-chat {
+  grid-template-columns: 250px 1fr 300px;
+}
+
+/* Matrix rain as background */
+.main-layout > .matrix-rain {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1; /* Behind content */
+}
+
+
 .content-container {
-  display: flex;
-  flex: 1;
+  grid-column: 2;
+  z-index: 1;
+  overflow: auto;
+  background: var(--content-bg, transparent);
+}
+
+/* Chat Panel */
+.chat-panel {
+  grid-column: 3;
+  z-index: 1;
+  display: none;  /* Hidden by default */
+  flex-direction: column;
+  background: var(--chat-bg, #121212);
   height: 100%;
   overflow: hidden;
+  border-left: 1px solid var(--border-color);
+}
+
+/* Open state */
+.chat-panel.open {
+  display: flex;  /* Show when open */
+  width: 300px;
+  min-width: 250px;
+  max-width: 400px;
+}
+
+/* Chat inner container */
+.chat-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: var(--chat-bg, #121212);
 }
 
 /* Content area - dynamic width */
 .content-area {
-  flex: 1;
+  width: 100%;
   height: 100%;
   overflow: hidden;
   transition: width 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  position: relative;
+  background: transparent;
+  padding: 0;
 }
 
-/* When chat is open, content-area should be 60% */
+/* When chat is open, adjust content width */
 .main-layout.has-chat .content-area {
-  width: 60%;
-  flex: none; /* Disable flex grow/shrink to enforce 60% width */
+  width: 100%;  /* Take full width of grid column */
 }
 
-/* Chat panel - hidden by default, 20% when open */
-.chat-panel {
-  position: static; /* Reset to default */
-  right: auto;
-  top: auto;
-  bottom: auto;
-  z-index: auto;
+.main-layout:not(.has-chat) .content-area {
+  width: 100%;
+  flex: none;
+}
+
+/* Chat header */
+.chat-header {
+  height: 50px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border, #333);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--chat-header-bg, #1a1a1a);
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.chat-title {
+  color: var(--text-color, #fff);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.chat-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.chat-action-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #999);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.chat-action-btn:hover {
+  background: var(--hover-bg, rgba(255, 255, 255, 0.1));
+  color: var(--text-color, #fff);
+}
+
+/* Chat messages area */
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  width: 100%;
+  background: var(--chat-bg, #121212);
+}
+
+/* Individual message styling */
+.chat-message {
+  display: flex;
+  margin-bottom: 16px;
+  width: 100%;
+}
+
+.user-message {
+  justify-content: flex-end;
+}
+
+.assistant-message {
+  justify-content: flex-start;
+}
+
+.message-avatar {
+  margin-right: 8px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--avatar-bg, #333);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.message-content {
+  max-width: 80%;
+  background: var(--message-bg, #1e1e1e);
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: var(--text-color, #fff);
+}
+
+.message-text {
+  word-break: break-word;
+}
+
+.message-time {
+  font-size: 11px;
+  color: var(--text-muted, #999);
+  margin-top: 4px;
+  text-align: right;
+}
+
+/* Typing indicator */
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.typing-indicator span {
+  width: 8px;
+  height: 8px;
+  background: var(--text-muted, #999);
+  border-radius: 50%;
+  display: inline-block;
+  animation: typing 1.4s infinite both;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+  100% { transform: translateY(0); }
+}
+
+/* Chat input area */
+.chat-input-container {
+  height: 70px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border, #333);
+  display: flex;
+  align-items: center;
+  background: var(--chat-input-bg, #1a1a1a);
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.chat-input {
+  flex: 1;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 20px;
+  border: 1px solid var(--border, #333);
+  background: var(--input-bg, #252525);
+  color: var(--text-color, #fff);
+  font-size: 14px;
+}
+
+.chat-send-btn {
+  width: 40px;
+  height: 40px;
+  margin-left: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--primary, #ffd700);
+  color: var(--primary-text, #000);
+  border: none;
+  cursor: pointer;
+}
+
+.chat-send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+
+
+
+
+
+
+/* Inner chat panel */
+.chat-panel-inner {
   display: flex;
   flex-direction: column;
   height: 100%;
-  border-left: 1px solid var(--color-border);
-  background: var(--color-background);
+  width: 100%;
+  opacity: 0;
+  transform: translateX(100%);
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-.main-layout.has-chat .chat-panel {
-  flex: 0 0 0; /* Collapsed by default */
-  overflow: hidden;
-  transition: flex 0.3s ease;
-  min-width: 250px;
-  max-width: 400px;
+.chat-panel-inner.open {
+  opacity: 1;
+  transform: translateX(0);
 }
 
 /* Editor container */
@@ -380,32 +600,7 @@ input, textarea {
   color: var(--mothercore-accent, #6e3d21);
 }
 
-/* Navigation Tree Icon Styles */
-.tree-item-icon .mothercore-icon {
-  width: 16px;
-  height: 16px;
-}
 
-.tree-item-icon .mothercore-icon svg {
-  width: 100%;
-  height: 100%;
-  color: #ffd700;
-}
-
-/* Ensure SVG icons in navigation tree have consistent alignment */
-.tree-item-content {
-  display: flex;
-  align-items: center;
-}
-
-.tree-item-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  margin-right: 8px;
-}
 
 /* Custom Title Bar */
 .custom-title-bar {
@@ -1977,55 +2172,118 @@ input:checked + .toggle-slider:before {
 
 /* Sidebar styling - floating sidebar with proper height */
 .sidebar {
-  width: 320px;
-  height: auto; /* Both sidebar and main content will use 75vh for consistency */
-  margin-top: 8px; /* Account for title bar height */
-  margin-bottom: 0px; /* Account for bottom bar */
-  margin-left: 0px; /* Add left margin for floating effect */
-  margin-right: 0;
-  background: rgba(0, 0, 0, 0.95); /* Keep solid background */
-  border-right: 1px solid rgba(255, 215, 0, 0.3);
-  border-radius: 12px; /* Add rounded corners for floating effect */
-  backdrop-filter: blur(10px);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3); /* Add depth */
-  transition: width 0.3s ease;
-}
-
-/* Sidebar header */
-.sidebar-header {
-  padding: 16px; /* Reduced from 20px */
-  border-bottom: 1px solid rgba(255, 215, 0, 0.3);
-  background: rgba(0, 0, 0, 0.1); /* Subtle distinction */
-}
-
-/* Sidebar content - ensure proper overflow behavior */
-.sidebar-content {
-  flex: 1;
+  background-color: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  width: auto;
+  height: 100%;
   overflow-y: auto;
-  padding: 16px;
+  padding: 0rem;
 }
 
-/* Sidebar footer - ensure it stays at bottom */
-.sidebar-footer {
-  padding: 16px;
-  border-top: 1px solid rgba(255, 215, 0, 0.3);
-  background: rgba(0, 0, 0, 0.1); /* Match header */
+/* Navigation Tree Icon Styles */
+.tree-item-icon .mothercore-icon {
+  width: 16px;
+  height: 16px;
 }
 
-/* Main content styling - proper spacing and full-width */
-.main-content {
-  flex: 1;
+.tree-item-icon .mothercore-icon svg {
+  width: 100%;
+  height: 100%;
+  color: var(--color-text-primary);
+}
+
+.tree-item {
   display: flex;
-  flex-direction: column;
-  height: calc(100vh - 0px); /* Account for fixed title bar */
-  margin-top: 66px; /* Account for fixed title bar */
-  background: transparent; /* Make transparent to show matrix rain */
-  position: relative;
-  z-index: 1;
-  padding: 16px 16px 48px 16px; /* Add bottom padding for bottom bar */
+  align-items: center;
+  padding: 0px 0px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 1px;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.tree-item-content {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  padding-left: 2px;
+}
+
+.tree-item-chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-secondary);
+}
+
+
+.tree-item:hover {
+  background: rgba(255, 215, 0, 0.1);
+}
+
+.tree-item.selected {
+  background: rgba(255, 215, 0, 0.2);
+  border: 1px solid rgba(255, 215, 0, 0.4);
+}
+
+.tree-item.expanded {
+  background: rgba(255, 215, 0, 0.05);
+}
+
+.tree-item-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tree-item-text {
+  flex: 1;
+  font-size: 14px;
+  color: #ffb000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tree-item-chevron {
+  width: 16px;
+  height: 16px;
+  color: #ffd700;
+  margin-right: 4px;
+  transition: transform 0.2s;
+}
+
+.tree-item-chevron.expanded {
+  transform: rotate(90deg);
+}
+
+.tree-item-add {
+  width: 16px;
+  height: 16px;
+  color: #ffd700;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.tree-item:hover .tree-item-add {
+  opacity: 1;
+}
+
+.tree-children {
+  margin-left: 5px;
+  padding-left: 0px;
 }
 
 /* Main content layout with sidebar and chat panel */
@@ -2037,19 +2295,6 @@ input:checked + .toggle-slider:before {
   transition: all 0.3s ease;
 }
 
-/* Content area - transparent background */
-.content-area {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  height: 100%;
-  overflow: hidden;
-  position: relative;
-  background: transparent; /* Make transparent to show matrix rain */
-  padding: 0;
-  margin-left: 16px; /* Space from sidebar */
-  transition: width 0.3s ease;
-}
 
 /* When chat is open, adjust the layout for 20/60/20 */
 .main-content-layout.chat-open .sidebar {
@@ -2330,28 +2575,6 @@ input:checked + .toggle-slider:before {
   padding: 0;
 }
 
-/* Fixed tree navigation styles to ensure proper display */
-.tree-item {
-  display: flex;
-  align-items: center;
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s;
-  margin-bottom: 2px;
-  max-width: 100%;
-  overflow: hidden;
-}
-
-.tree-item:hover {
-  background: rgba(255, 215, 0, 0.1);
-}
-
-.tree-item.selected {
-  background: rgba(255, 215, 0, 0.2);
-  border: 1px solid rgba(255, 215, 0, 0.4);
-}
-
 .tree-item-text {
   flex: 1;
   font-size: 14px;
@@ -2359,13 +2582,6 @@ input:checked + .toggle-slider:before {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.tree-children {
-  margin-left: 20px;
-  border-left: 1px solid rgba(255, 215, 0, 0.2);
-  padding-left: 8px;
-  overflow: hidden;
 }
 
 /* Proper form styling */
@@ -2449,32 +2665,9 @@ input:checked + .toggle-slider:before {
   cursor: not-allowed;
 }
 
-/* Chat Panel Styling */
-.chat-panel {
-  position: fixed;
-  top: 66px; /* Match sidebar top margin */
-  right: 0;
-  width: 20%;
-  min-width: 250px;
-  height: 75vh; /* Match sidebar height */
-  background: rgba(0, 0, 0, 0.95);
-  border-left: 1px solid rgba(255, 215, 0, 0.3);
-  display: flex;
-  flex-direction: column;
-  z-index: 100;
-  transform: translateX(100%);
-  transition: transform 0.3s ease;
-  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.3);
-  margin-bottom: 36px; /* Match sidebar bottom margin */
-  border-radius: 12px 0 0 12px;
-  overflow: hidden;
-}
+/* Additional styling for forms and UI elements */
 
-.chat-panel.open {
-  transform: translateX(0);
-  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
-}
-
+/* These styles are for the chat panel when it appears in other contexts */
 .chat-header {
   display: flex;
   align-items: center;
@@ -3592,6 +3785,7 @@ input:checked + .toggle-slider:before {
   flex: 1;
   overflow: auto;
   position: relative;
+  height: 100%;
 }
 
 .tab-content-wrapper {
@@ -4075,14 +4269,395 @@ input:checked + .toggle-slider:before {
   padding: 0.625rem 0;
 }
 
-.main-layout.has-chat .content-area {
-  flex: 0 0 60%; /* Fixed 60% width when chat is open */
+
+/* Responsive layout adjustments */
+
+/* Media queries for responsive layout */
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .grid-container .chat-open {
+    grid-template-columns: 200px minmax(0, 1fr) 250px;
+  }
 }
 
-.chat-panel {
-  flex: 0 0 0; /* Collapsed by default */
+@media (max-width: 992px) {
+  .grid-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .grid-container .chat-open {
+    grid-template-columns: 1fr 300px;
+  }
+  
+  .sidebar-container {
+    display: none; /* Hide sidebar on smaller screens */
+  }
+  
+  .content-container {
+    grid-column: 1;
+  }
+  
+  .chat-container {
+    grid-column: 2;
+  }
+}
+
+.matrix-rain-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 0;
   overflow: hidden;
-  transition: flex 0.3s ease;
-  min-width: 250px;
-  max-width: 400px;
+}
+
+.main-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.main-content > *:not(.matrix-rain-container) {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+}
+
+/* Menu bar styling */
+.menu-bar {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  z-index: 101;  /* Above other elements */
+}
+
+.menu-bar button {
+  color: var(--text-color, #fff);
+  background: transparent;
+  padding: 0 1rem;
+  height: 100%;
+  border: none;
+  cursor: pointer;
+}
+
+.menu-bar button:hover {
+  background: var(--hover-bg, rgba(255, 255, 255, 0.1));
+}
+
+.menu-bar .dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  min-width: 200px;
+  z-index: 102;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Title bar menu styling */
+.title-bar-menu {
+  position: relative;
+}
+
+.menu-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 200px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 4px;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  color: var(--text-color);
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background-color 0.2s;
+}
+
+.menu-item:hover {
+  background: var(--color-surface-hover);
+}
+
+.menu-item-icon {
+  margin-right: 8px;
+  opacity: 0.7;
+}
+
+.menu-separator {
+  height: 1px;
+  background: var(--color-border);
+  margin: 4px 0;
+}
+
+/* Match the cyberpunk theme */
+.menu-dropdown {
+  background: var(--color-surface-dark);
+  border-color: var(--color-border-glow);
+  box-shadow: 0 0 10px var(--color-glow);
+}
+
+.menu-item {
+  color: var(--text-color-primary);
+  font-size: 0.9rem;
+}
+
+.menu-item:hover {
+  background: var(--color-surface-hover);
+  color: var(--text-color-highlight);
+}
+
+/* Settings tab styling */
+.settings-tab-container {
+  height: 100%;
+  width: 100%;
+  overflow-y: auto;
+  background: var(--color-surface);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ensure settings content fits in tab */
+.settings-tab-container .settings-container {
+  position: relative;
+  height: auto;
+  min-height: 100%;
+  border-radius: 0.5rem;
+  background: var(--color-surface-dark);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Remove the modal overlay styles when in tab mode */
+.settings-tab-container .settings-overlay {
+  position: relative;
+  background: none;
+  backdrop-filter: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+/* Adjust settings content layout in tab mode */
+.settings-tab-container .settings-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+/* Hide close button in tab mode since we use the tab close button */
+.settings-tab-container .settings-close {
+  display: none;
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.settings-body {
+  display: flex;
+  height: calc(100% - 4rem);
+  overflow: hidden;
+}
+
+.settings-sidebar {
+  width: 250px;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface-dark);
+  padding: 1rem 0;
+}
+
+.settings-nav-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  color: var(--text-color);
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.settings-nav-item:hover {
+  background: var(--color-surface-hover);
+}
+
+.settings-nav-item.active {
+  background: var(--color-surface-selected);
+  color: var(--text-color-highlight);
+}
+
+.settings-content {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.settings-section {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.settings-section-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: var(--text-color-highlight);
+}
+
+/* Keep your existing settings form styling */
+.setting-item {
+  margin-bottom: 1rem;
+}
+
+.setting-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--text-color-secondary);
+}
+
+/* Matrix settings specific styling */
+.matrix-settings {
+  display: grid;
+  gap: 1rem;
+}
+
+/* Maintain your other specific settings styles */
+
+.settings-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--color-surface);
+  color: var(--text-color);
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-dark);
+}
+
+.settings-layout {
+  display: flex;
+  height: calc(100% - 7rem); /* Account for header and footer */
+  overflow: hidden;
+}
+
+.settings-nav {
+  width: 240px;
+  padding: 1rem 0;
+  background: var(--color-surface-dark);
+  border-right: 1px solid var(--color-border);
+  overflow-y: auto;
+}
+
+.settings-nav-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  color: var(--text-color);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.settings-nav-item:hover {
+  background: var(--color-surface-hover);
+}
+
+.settings-nav-item.active {
+  background: var(--color-surface-selected);
+  color: var(--text-color-highlight);
+  border-left: 2px solid var(--color-accent);
+}
+
+.settings-content-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem;
+}
+
+.settings-footer {
+  padding: 1rem;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface-dark);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.settings-grid {
+  display: grid;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.setting-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.about-content {
+  text-align: center;
+  padding: 2rem;
+}
+
+.about-logo {
+  margin-bottom: 2rem;
+}
+
+.about-info {
+  margin-bottom: 2rem;
+}
+
+.about-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.stat {
+  padding: 1rem;
+  background: var(--color-surface-dark);
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--text-color-highlight);
+  display: block;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: var(--text-color-secondary);
 }

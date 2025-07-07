@@ -23,8 +23,6 @@ interface Message {
 }
 
 const ChatPanel: FC<ChatPanelProps> = ({ isOpen, onClose }) => {
-  if (!isOpen) return null;
-  
   const [inputValue, setInputValue] = useState('');
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -122,90 +120,92 @@ const ChatPanel: FC<ChatPanelProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="chat-panel">
-      <div className="chat-header">
-        <h3 className="chat-title">MotherCore Assistant</h3>
-        <div className="chat-actions">
+    <div className={`chat-panel ${isOpen ? 'open' : ''}`}>
+      <div className="chat-inner">
+        <div className="chat-header">
+          <h3 className="chat-title">MotherCore Assistant</h3>
+          <div className="chat-actions">
+            <button 
+              className="chat-action-btn"
+              onClick={clearChat}
+              title="Clear chat"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+            <button 
+              className="chat-action-btn"
+              title="Download chat history"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+            <button 
+              className="chat-action-btn"
+              onClick={onClose}
+              title="Close chat"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+        
+        <div className="chat-messages">
+          {messages.map((message) => (
+            <div 
+              key={message.id} 
+              className={`chat-message ${message.sender === 'user' ? 'user-message' : 'assistant-message'}`}
+            >
+              <div className="message-avatar">
+                {message.sender === 'user' ? (
+                  <User className="w-5 h-5" />
+                ) : (
+                  <Bot className="w-5 h-5" />
+                )}
+              </div>
+              <div className="message-content">
+                <div className="message-text">{message.content}</div>
+                <div className="message-time">
+                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </div>
+              </div>
+            </div>
+          ))}
+          
+          {isLoading && (
+            <div className="chat-message assistant-message">
+              <div className="message-avatar">
+                <Bot className="w-5 h-5" />
+              </div>
+              <div className="message-content">
+                <div className="typing-indicator">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <div ref={messagesEndRef} />
+        </div>
+        
+        <div className="chat-input-container">
+          <input
+            ref={inputRef}
+            type="text"
+            className="chat-input"
+            placeholder="Type a message..."
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyPress={handleKeyPress}
+          />
           <button 
-            className="chat-action-btn"
-            onClick={clearChat}
-            title="Clear chat"
+            className="chat-send-btn"
+            onClick={handleSendMessage}
+            disabled={!inputValue.trim() || isLoading}
           >
-            <Trash2 className="w-4 h-4" />
-          </button>
-          <button 
-            className="chat-action-btn"
-            title="Download chat history"
-          >
-            <Download className="w-4 h-4" />
-          </button>
-          <button 
-            className="chat-action-btn"
-            onClick={onClose}
-            title="Close chat"
-          >
-            <X className="w-4 h-4" />
+            <Send className="w-4 h-4" />
           </button>
         </div>
-      </div>
-      
-      <div className="chat-messages">
-        {messages.map((message) => (
-          <div 
-            key={message.id} 
-            className={`chat-message ${message.sender === 'user' ? 'user-message' : 'assistant-message'}`}
-          >
-            <div className="message-avatar">
-              {message.sender === 'user' ? (
-                <User className="w-5 h-5" />
-              ) : (
-                <Bot className="w-5 h-5" />
-              )}
-            </div>
-            <div className="message-content">
-              <div className="message-text">{message.content}</div>
-              <div className="message-time">
-                {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </div>
-            </div>
-          </div>
-        ))}
-        
-        {isLoading && (
-          <div className="chat-message assistant-message">
-            <div className="message-avatar">
-              <Bot className="w-5 h-5" />
-            </div>
-            <div className="message-content">
-              <div className="typing-indicator">
-                <span></span>
-                <span></span>
-                <span></span>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        <div ref={messagesEndRef} />
-      </div>
-      
-      <div className="chat-input-container">
-        <input
-          ref={inputRef}
-          type="text"
-          className="chat-input"
-          placeholder="Type a message..."
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyPress={handleKeyPress}
-        />
-        <button 
-          className="chat-send-btn"
-          onClick={handleSendMessage}
-          disabled={!inputValue.trim() || isLoading}
-        >
-          <Send className="w-4 h-4" />
-        </button>
       </div>
     </div>
   );

@@ -29,18 +29,26 @@ interface Window {
     // Organization management
     getOrganizations: () => Promise<any>;
     createOrganization: (data: any) => Promise<any>;
+    updateOrganization: (data: any) => Promise<any>;
+    deleteOrganization: (id: string) => Promise<any>;
     
     // Project management
     getProjects: (orgId: string) => Promise<any>;
     createProject: (data: any) => Promise<any>;
+    updateProject: (data: any) => Promise<any>;
+    deleteProject: (id: string) => Promise<any>;
     
     // Book management
     getBooks: (projectId: string) => Promise<any>;
     createBook: (data: any) => Promise<any>;
+    updateBook: (data: any) => Promise<any>;
+    deleteBook: (id: string) => Promise<any>;
     
     // Chapter management
     getChapters: (bookId: string) => Promise<any>;
     createChapter: (data: any) => Promise<any>;
+    updateChapter: (data: any) => Promise<any>;
+    deleteChapter: (id: string) => Promise<any>;
     
     // Page management
     getPages: (chapterId: string) => Promise<any>;
@@ -49,6 +57,7 @@ interface Window {
     getPageContent: (pageId: string) => Promise<any>;
     updatePage: (data: any) => Promise<any>;
     updatePageContent: (pageId: string, content: string, plainText: string) => Promise<any>;
+    deletePage: (id: string) => Promise<any>;
     
     // Database location management
     getDatabaseLocation: () => Promise<any>;

@@ -40,9 +40,20 @@ interface Page {
   id: string
   chapter_id: string
   title: string
-  content?: string
-  content_text?: string
-  page_type?: string
+  content?: string // Main content (could be base64 for binary, JSON for structured data, or text)
+  content_text?: string // Plain text version for search
+  page_type?: string // Enhanced to support new types: 'note', 'code', 'image', 'video', 'audio', 'pdf', 'spreadsheet'
+  metadata?: { // New field for type-specific metadata
+    language?: string // For code files
+    mimeType?: string // For media files
+    dimensions?: { width: number, height: number } // For images
+    duration?: number // For audio/video
+    fileSize?: number // For all binary content
+    originalFileName?: string // For imported files
+    lastModified?: string // For tracking file changes
+    encoding?: string // For text files
+    version?: string // For tracking content versions
+  }
   tags?: string
   position?: number
 }
@@ -336,21 +347,44 @@ class DatabaseManager {
     `).run()
 
     // Pages table
-    this.db.prepare(`
+    this.db.exec(`
       CREATE TABLE IF NOT EXISTS pages (
         id TEXT PRIMARY KEY,
-        chapter_id TEXT,
+        chapter_id TEXT NOT NULL,
         title TEXT NOT NULL,
-        content BLOB,
+        content TEXT,
         content_text TEXT,
         page_type TEXT DEFAULT 'note',
         tags TEXT,
         position INTEGER,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(chapter_id) REFERENCES chapters(id)
-      )
-    `).run()
+        FOREIGN KEY (chapter_id) REFERENCES chapters (id) ON DELETE CASCADE
+      );
+    `)
+
+    // Add metadata column if it doesn't exist
+    try {
+      // Check if metadata column exists
+      const tableInfo = this.db.prepare("PRAGMA table_info(pages)").all()
+      const hasMetadata = tableInfo.some((col: any) => col.name === 'metadata')
+      
+      if (!hasMetadata) {
+        console.log('Adding metadata column to pages table')
+        this.db.exec(`
+          ALTER TABLE pages ADD COLUMN metadata TEXT;
+        `)
+      }
+    } catch (error) {
+      console.error('Error checking/adding metadata column:', error)
+    }
+
+    // Add indexes for common queries
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_pages_chapter_id ON pages(chapter_id);
+      CREATE INDEX IF NOT EXISTS idx_pages_page_type ON pages(page_type);
+      CREATE INDEX IF NOT EXISTS idx_pages_position ON pages(position);
+    `)
 
     // Media files table
     this.db.prepare(`
@@ -792,44 +826,63 @@ class DatabaseManager {
   
   // Page methods
   public createPage(page: Page) {
-    console.log('DatabaseManager: Creating page', page);
-    
-    const { id, chapter_id, title, content = null, content_text = null, page_type = 'note', tags = null, position = null } = page
-    
     try {
-      // Begin a transaction
-      const transaction = this.db.transaction(() => {
-        // Check if the chapter exists
-        const chapter = this.db.prepare('SELECT id FROM chapters WHERE id = ?').get(chapter_id);
-        if (!chapter) {
-          throw new Error(`Chapter with ID ${chapter_id} does not exist`);
+      // Get the next position for this chapter
+      const position = this.getNextPagePosition(page.chapter_id)
+      
+      // Ensure page_type is set
+      const pageType = page.page_type || 'note'
+      
+      // Initialize metadata object based on page type
+      const metadata = {
+        ...(page.metadata || {}),
+        lastModified: new Date().toISOString()
+      }
+      
+      const result = this.db.prepare(`
+        INSERT INTO pages (
+          id, 
+          chapter_id, 
+          title, 
+          content,
+          content_text,
+          page_type,
+          metadata,
+          position,
+          created_at,
+          updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      `).run(
+        page.id || crypto.randomUUID(),
+        page.chapter_id,
+        page.title,
+        page.content || '',
+        page.content_text || '',
+        pageType,
+        JSON.stringify(metadata),
+        position
+      )
+      
+      if (result.changes === 0) {
+        throw new Error('Failed to create page')
+      }
+      
+      return {
+        success: true,
+        page: {
+          ...page,
+          id: result.lastInsertRowid,
+          position,
+          page_type: pageType,
+          metadata
         }
-        
-        // Convert content to JSON string if it's an object
-        const contentStr = content ? (typeof content === 'object' ? JSON.stringify(content) : content) : null;
-        
-        const stmt = this.db.prepare(`
-          INSERT INTO pages (id, chapter_id, title, content, content_text, page_type, tags, position)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `);
-        
-        const result = stmt.run(id, chapter_id, title, contentStr, content_text, page_type, tags, position);
-        console.log('Page created in database with result:', result);
-        
-        // Verify page was created
-        const insertedPage = this.db.prepare('SELECT * FROM pages WHERE id = ?').get(id);
-        console.log('Inserted page verification:', insertedPage);
-        
-        return insertedPage; // Return the inserted page
-      });
-      
-      // Execute the transaction and get the result
-      const result = transaction();
-      
-      return result;
-    } catch (error) {
-      console.error('Database error in createPage:', error);
-      throw error; // Re-throw to handle in the IPC layer
+      }
+    } catch (err) {
+      console.error('Error creating page:', err)
+      return {
+        success: false,
+        error: String(err)
+      }
     }
   }
   
@@ -907,39 +960,39 @@ class DatabaseManager {
   }
   
   public updatePageContent(id: string, content: any, plainText: string) {
-    console.log(`Updating content for page ${id}`);
-    
+    console.log(`Updating content for page ${id}`)
     try {
-      // Begin a transaction
-      const transaction = this.db.transaction(() => {
-        // First verify the page exists
-        const page = this.db.prepare('SELECT id FROM pages WHERE id = ?').get(id);
-        if (!page) {
-          throw new Error(`Page with ID ${id} does not exist`);
+      return this.db.transaction(() => {
+        // Verify page exists
+        if (!this.db.prepare('SELECT id FROM pages WHERE id = ?').get(id)) {
+          throw new Error(`Page with ID ${id} does not exist`)
         }
-        
-        // Convert content to JSON string if it's an object
-        const contentStr = typeof content === 'object' ? JSON.stringify(content) : content;
-        
-        const stmt = this.db.prepare(`
-          UPDATE pages
-          SET content = ?, content_text = ?, updated_at = CURRENT_TIMESTAMP
+
+        // Extract metadata if content is an object with metadata field
+        let actualContent = content
+        let metadata = null
+
+        if (typeof content === 'object' && content !== null) {
+          if (content.metadata) {
+            metadata = JSON.stringify(content.metadata)
+            actualContent = content.content
+          }
+        }
+
+        const result = this.db.prepare(`
+          UPDATE pages 
+          SET content = ?, 
+              content_text = ?,
+              metadata = COALESCE(?, metadata),
+              updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
-        `);
-        
-        const result = stmt.run(contentStr, plainText, id);
-        console.log(`Page content updated with result:`, result);
-        
-        return result;
-      });
-      
-      // Execute the transaction and get the result
-      const result = transaction();
-      
-      return result;
+        `).run(actualContent, plainText, metadata, id)
+
+        return result
+      })()
     } catch (error) {
-      console.error(`Error updating content for page ${id}:`, error);
-      throw error; // Re-throw to handle in the IPC layer
+      console.error(`Error updating content for page ${id}:`, error)
+      throw error
     }
   }
   
@@ -1084,6 +1137,69 @@ class DatabaseManager {
     } catch (error) {
       console.error("Error logging database state:", error);
     }
+  }
+
+  private validateAndExtractMetadata(content: any, pageType: string) {
+    const metadata: any = {}
+
+    switch (pageType) {
+      case 'code':
+        // Extract language from code content
+        const languageMatch = content.match(/^\/\/ language: (.+)$/m)
+        if (languageMatch) {
+          metadata.language = languageMatch[1]
+          content = content.replace(/^\/\/ language: .+\n/, '')
+        }
+        break
+
+      case 'image':
+        // Extract image metadata for base64 images
+        if (typeof content === 'string' && content.startsWith('data:image/')) {
+          const mimeMatch = content.match(/^data:([^;]+);/)
+          if (mimeMatch) {
+            metadata.mimeType = mimeMatch[1]
+          }
+        }
+        break
+
+      case 'video':
+      case 'audio':
+        // Handle media file metadata
+        if (content.duration) {
+          metadata.duration = content.duration
+        }
+        if (content.mimeType) {
+          metadata.mimeType = content.mimeType
+        }
+        break
+
+      case 'spreadsheet':
+        // Handle spreadsheet metadata
+        metadata.version = '1.0'
+        metadata.encoding = 'json'
+        break
+
+      case 'pdf':
+        // Handle PDF metadata
+        if (typeof content === 'string' && content.startsWith('data:application/pdf;')) {
+          metadata.mimeType = 'application/pdf'
+        }
+        break
+    }
+
+    return { content, metadata }
+  }
+
+  private getNextPagePosition(chapterId: string): number {
+    // Get the highest position number for the given chapter
+    const result = this.db.prepare(`
+      SELECT MAX(position) as maxPosition 
+      FROM pages 
+      WHERE chapter_id = ?
+    `).get(chapterId) as { maxPosition: number | null }
+
+    // If no pages exist or no position set, start at 0
+    return (result.maxPosition ?? -1) + 1
   }
 }
 

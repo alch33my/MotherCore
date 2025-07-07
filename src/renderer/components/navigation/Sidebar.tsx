@@ -11,6 +11,7 @@ import {
   FileText,
 } from 'lucide-react';
 import NavigationTree from './navigation-tree';
+import type { TreeNode } from './navigation-tree';
 
 interface SidebarProps {
   onSelectItem: (item: any, type: string) => void;
@@ -22,6 +23,8 @@ interface SidebarProps {
   onCreateBook?: () => void;
   onCreateChapter?: () => void;
   onCreatePage?: () => void;
+  onRename?: (item: any, type: string) => void;
+  onDelete?: (item: any, type: string) => void;
 }
 
 const Sidebar: FC<SidebarProps> = ({ 
@@ -33,7 +36,9 @@ const Sidebar: FC<SidebarProps> = ({
   onCreateProject,
   onCreateBook,
   onCreateChapter,
-  onCreatePage
+  onCreatePage,
+  onRename,
+  onDelete
 }) => {
   const [organizations, setOrganizations] = useState<any[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -163,6 +168,117 @@ const Sidebar: FC<SidebarProps> = ({
       onCreatePage(); 
     }
   };
+
+  const handleRename = async (item: TreeNode) => {
+    if (!window.electronAPI) {
+      setError('Electron API not available')
+      return
+    }
+
+    try {
+      // If parent component provides rename handler, use that
+      if (onRename) {
+        onRename(item, item.type)
+        return
+      }
+
+      // Otherwise, handle rename internally
+      const newName = prompt('Enter new name:', item.name)
+      if (!newName || newName === item.name) return
+
+      let result
+      switch (item.type) {
+        case 'organization':
+          result = await window.electronAPI.updateOrganization({
+            ...item,
+            name: newName
+          })
+          break
+        case 'project':
+          result = await window.electronAPI.updateProject({
+            ...item,
+            name: newName
+          })
+          break
+        case 'book':
+          result = await window.electronAPI.updateBook({
+            ...item,
+            name: newName
+          })
+          break
+        case 'chapter':
+          result = await window.electronAPI.updateChapter({
+            ...item,
+            name: newName
+          })
+          break
+        case 'page':
+          result = await window.electronAPI.updatePage({
+            ...item,
+            title: newName
+          })
+          break
+      }
+
+      if (result?.success) {
+        // Refresh the tree
+        loadOrganizations()
+      } else {
+        setError(result?.error || 'Failed to rename item')
+      }
+    } catch (err) {
+      console.error('Error renaming item:', err)
+      setError('Failed to rename item')
+    }
+  }
+
+  const handleDelete = async (item: TreeNode) => {
+    if (!window.electronAPI) {
+      setError('Electron API not available')
+      return
+    }
+
+    try {
+      // If parent component provides delete handler, use that
+      if (onDelete) {
+        onDelete(item, item.type)
+        return
+      }
+
+      // Otherwise, handle delete internally
+      const confirmMessage = `Are you sure you want to delete this ${item.type}? This action cannot be undone.`
+      if (!confirm(confirmMessage)) return
+
+      let result
+      switch (item.type) {
+        case 'organization':
+          result = await window.electronAPI.deleteOrganization(item.id)
+          break
+        case 'project':
+          result = await window.electronAPI.deleteProject(item.id)
+          break
+        case 'book':
+          result = await window.electronAPI.deleteBook(item.id)
+          break
+        case 'chapter':
+          result = await window.electronAPI.deleteChapter(item.id)
+          break
+        case 'page':
+          result = await window.electronAPI.deletePage(item.id)
+          break
+      }
+
+      if (result?.success) {
+        // Refresh the tree
+        loadOrganizations()
+      } else {
+        setError(result?.error || 'Failed to delete item')
+      }
+    } catch (err) {
+      console.error('Error deleting item:', err)
+      setError('Failed to delete item')
+    }
+  }
 
   return (
     <div className="sidebar">
@@ -329,33 +445,32 @@ const Sidebar: FC<SidebarProps> = ({
           onAddBook={handleAddBook}
           onAddChapter={handleAddChapter}
           onAddPage={handleAddPage}
+          onRename={handleRename}
+          onDelete={handleDelete}
         />
       </div>
 
       {/* Sidebar Footer */}
-      <div className="sidebar-footer">
+      <div className="sidebar-footer border-t border-matrix-gold/20 bg-matrix-black/50 p-2">
         <div className="flex justify-between items-center">
           <button
             title="Export Data"
-            className="p-2 hover:bg-matrix-gold/20 rounded transition-colors"
+            className="p-2 hover:bg-matrix-gold/20 rounded transition-colors text-matrix-gold"
             onClick={() => {
               console.log('Export functionality would export all data');
             }}
           >
-            <Download className="w-4 h-4 text-matrix-gold" />
+            <Download className="w-4 h-4" />
           </button>
           <button
             title="Settings"
-            className="p-2 hover:bg-matrix-gold/20 rounded transition-colors"
+            className="p-2 hover:bg-matrix-gold/20 rounded transition-colors text-matrix-gold"
             onClick={() => {
               console.log('Settings functionality would open settings');
             }}
           >
-            <Settings className="w-4 h-4 text-matrix-gold" />
+            <Settings className="w-4 h-4" />
           </button>
-        </div>
-        <div className="text-xs text-matrix-gold/50 text-center mt-2">
-          v0.0.1 - Local First
         </div>
       </div>
     </div>

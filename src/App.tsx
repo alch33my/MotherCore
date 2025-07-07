@@ -1,5 +1,4 @@
-import React from 'react'
-import { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import './index.css' // Single CSS import that includes premium-ui.css
 import MatrixRain from './renderer/components/effects/matrix-rain'
 import { AlertTriangleIcon, CheckCircleIcon } from 'lucide-react'
@@ -7,7 +6,7 @@ import Sidebar from './renderer/components/navigation/Sidebar'
 import MainContent from './renderer/components/content/MainContent'
 import TitleBar from './renderer/components/layout/TitleBar'
 import BottomBar from './renderer/components/layout/BottomBar'
-import SettingsPage from './renderer/components/settings/SettingsPage'
+import SettingsTab from './renderer/components/settings/SettingsPage'
 import AuthScreen from './renderer/components/auth/AuthScreen' // Import AuthScreen
 import { ThemeProvider } from './renderer/context/ThemeContext'
 // Import form components
@@ -332,7 +331,23 @@ function App() {
   };
 
   const handleSettingsClick = () => {
-    setShowSettings(true);
+    console.log('Matrix settings:', matrixSettings); // Debug log
+    try {
+      if (mainContentRef.current) {
+        mainContentRef.current.openSettingsTab({
+          matrixSettings: {
+            intensity: matrixSettings.intensity || 70,
+            speed: matrixSettings.speed || 50,
+            colorScheme: matrixSettings.colorScheme || 'gold',
+            density: matrixSettings.density || 0.8,
+            enabled: matrixSettings.enabled ?? true
+          },
+          onMatrixSettingsChange: setMatrixSettings
+        });
+      }
+    } catch (error) {
+      console.error('Error in handleSettingsClick:', error);
+    }
   };
 
   // Handle content refresh from child components
@@ -345,14 +360,16 @@ function App() {
     }
   }, [selectedItem, selectedType]);
 
-  // Add state for chat panel visibility
+  // Chat panel state
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   // Fix chat toggle function
-  const toggleChat = useCallback(() => {
+  const handleToggleChat = useCallback(() => {
     setIsChatOpen(prev => !prev);
-    console.log('Chat toggled:', !isChatOpen);
-  }, [isChatOpen]);
+  }, []);
+
+  // Add ref to MainContent
+  const mainContentRef = useRef<{ openSettingsTab: (props: any) => void } | null>(null);
 
   function renderToasts() {
     return (
@@ -403,17 +420,7 @@ function App() {
   function renderMainApplication() {
     return (
       <div className="app-container">
-        {/* Matrix Background */}
-        <div className="matrix-background">
-          <MatrixRain 
-            intensity={70}
-            speed={50}
-            colorScheme="gold"
-            density={0.8}
-            theme="dark"
-          />
-        </div>
-        
+                
         {/* Title Bar */}
         <TitleBar 
           onSettingsClick={handleSettingsClick}
@@ -422,147 +429,91 @@ function App() {
         />
         
         {/* Main Layout */}
-        <div className={`main-layout ${isChatOpen ? 'has-chat' : ''}`}>
-          {/* Sidebar */}
-          <Sidebar 
-            onSelectItem={handleSelectItem}
-            onBackToLibrary={handleBackToLibrary}
-            selectedOrganization={selectedOrganization}
-            isLibraryView={isLibraryView}
-            onCreateOrganization={() => setShowCreateOrgForm(true)}
-            onCreateProject={() => setShowCreateProjectForm(true)}
-            onCreateBook={() => setShowCreateBookForm(true)}
-            onCreateChapter={() => setShowCreateChapterForm(true)}
-            onCreatePage={() => setShowCreatePageForm(true)}
-          />
-          
-          {/* Main Content Area */}
-          <div className="content-container">
-            <MainContent 
-              selectedItem={selectedItem}
-              selectedType={selectedType}
-              onEditorStatsChange={handleEditorStatsChange}
-              currentTime={currentTime}
-              wordCount={wordCount}
-              charCount={charCount}
-              onRefreshContent={handleRefreshContent}
-              onSelectItem={handleSelectItem}
-              onAddProject={(orgId) => {
-                setActiveOrgId(orgId);
-                setShowCreateProjectForm(true);
-              }}
-              onAddBook={(projectId) => {
-                setActiveProjectId(projectId);
-                setShowCreateBookForm(true);
-              }}
-              onAddChapter={(bookId) => {
-                setActiveBookId(bookId);
-                setShowCreateChapterForm(true);
-              }}
-              onAddPage={(chapterId) => {
-                setActiveChapterId(chapterId);
-                setShowCreatePageForm(true);
-              }}
-              onCreateOrganization={() => setShowCreateOrgForm(true)}
-            />
-            
-            {/* Chat Panel */}
-            {isChatOpen && (
-              <div className="chat-panel">
-                <ChatPanel 
-                  isOpen={isChatOpen} 
-                  onClose={() => setIsChatOpen(false)} 
-                />
-              </div>
-            )}
-          </div>
-          
-          {/* Bottom Bar */}
-          <BottomBar 
-            stats={{
-              organizations: stats.organizations,
-              projects: stats.projects,
-              books: 0,
-              chapters: 0,
-              notes: stats.notes,
-              storage: stats.storage
+        <MainLayout 
+          isChatOpen={isChatOpen}
+          onToggleChat={handleToggleChat}
+          selectedItem={selectedItem}
+          selectedType={selectedType}
+          onSelectItem={handleSelectItem}
+          ref={mainContentRef}
+        />
+        
+        {/* Bottom Bar */}
+        <BottomBar 
+          stats={{
+            organizations: stats.organizations,
+            projects: stats.projects,
+            books: 0,
+            chapters: 0,
+            notes: stats.notes,
+            storage: stats.storage
+          }}
+          onToggleChat={handleToggleChat}
+          isChatOpen={isChatOpen}
+        />
+        
+        {/* Create Forms */}
+        {showCreateOrgForm && (
+          <CreateOrganizationForm
+            onClose={() => setShowCreateOrgForm(false)}
+            onSuccess={() => {
+              setShowCreateOrgForm(false);
+              addToast(`Organization created successfully!`, 'success');
+              forceRefresh();
             }}
-            onToggleChat={toggleChat}
-            isChatOpen={isChatOpen}
           />
-          
-          {/* Settings Page */}
-          {showSettings && (
-            <SettingsPage 
-              onClose={() => setShowSettings(false)}
-              matrixSettings={matrixSettings}
-              onMatrixSettingsChange={setMatrixSettings}
-            />
-          )}
-          
-          {/* Create Forms */}
-          {showCreateOrgForm && (
-            <CreateOrganizationForm
-              onClose={() => setShowCreateOrgForm(false)}
-              onSuccess={() => {
-                setShowCreateOrgForm(false);
-                addToast(`Organization created successfully!`, 'success');
-                forceRefresh();
-              }}
-            />
-          )}
-          
-          {showCreateProjectForm && activeOrgId && (
-            <CreateProjectForm
-              organizationId={activeOrgId}
-              onClose={() => setShowCreateProjectForm(false)}
-              onSuccess={() => {
-                setShowCreateProjectForm(false);
-                addToast(`Project created successfully!`, 'success');
-                forceRefresh();
-              }}
-            />
-          )}
-          
-          {showCreateBookForm && activeProjectId && (
-            <CreateBookForm
-              projectId={activeProjectId}
-              onClose={() => setShowCreateBookForm(false)}
-              onSuccess={() => {
-                setShowCreateBookForm(false);
-                addToast(`Book created successfully!`, 'success');
-                forceRefresh();
-              }}
-            />
-          )}
-          
-          {showCreateChapterForm && activeBookId && (
-            <CreateChapterForm
-              bookId={activeBookId}
-              onClose={() => setShowCreateChapterForm(false)}
-              onSuccess={() => {
-                setShowCreateChapterForm(false);
-                addToast(`Chapter created successfully!`, 'success');
-                forceRefresh();
-              }}
-            />
-          )}
-          
-          {showCreatePageForm && activeChapterId && (
-            <CreatePageForm
-              chapterId={activeChapterId}
-              onClose={() => setShowCreatePageForm(false)}
-              onSuccess={() => {
-                setShowCreatePageForm(false);
-                addToast(`Page created successfully!`, 'success');
-                forceRefresh();
-              }}
-            />
-          )}
-          
-          {/* Toast Notifications */}
-          {renderToasts()}
-        </div>
+        )}
+        
+        {showCreateProjectForm && activeOrgId && (
+          <CreateProjectForm
+            organizationId={activeOrgId}
+            onClose={() => setShowCreateProjectForm(false)}
+            onSuccess={() => {
+              setShowCreateProjectForm(false);
+              addToast(`Project created successfully!`, 'success');
+              forceRefresh();
+            }}
+          />
+        )}
+        
+        {showCreateBookForm && activeProjectId && (
+          <CreateBookForm
+            projectId={activeProjectId}
+            onClose={() => setShowCreateBookForm(false)}
+            onSuccess={() => {
+              setShowCreateBookForm(false);
+              addToast(`Book created successfully!`, 'success');
+              forceRefresh();
+            }}
+          />
+        )}
+        
+        {showCreateChapterForm && activeBookId && (
+          <CreateChapterForm
+            bookId={activeBookId}
+            onClose={() => setShowCreateChapterForm(false)}
+            onSuccess={() => {
+              setShowCreateChapterForm(false);
+              addToast(`Chapter created successfully!`, 'success');
+              forceRefresh();
+            }}
+          />
+        )}
+        
+        {showCreatePageForm && activeChapterId && (
+          <CreatePageForm
+            chapterId={activeChapterId}
+            onClose={() => setShowCreatePageForm(false)}
+            onSuccess={() => {
+              setShowCreatePageForm(false);
+              addToast(`Page created successfully!`, 'success');
+              forceRefresh();
+            }}
+          />
+        )}
+        
+        {/* Toast Notifications */}
+        {renderToasts()}
       </div>
     );
   }

@@ -1,7 +1,7 @@
 import React from 'react'
 import { useState, useEffect } from 'react';
 import type { FC } from 'react';
-import { Settings, Minimize, Square, X, RefreshCw } from 'lucide-react';
+import { Settings, Minimize, Square, X, RefreshCw, ChevronRight } from 'lucide-react';
 import Icon from '../ui/Icon';
 
 interface TitleBarProps {
@@ -98,7 +98,27 @@ const TitleBar: FC<TitleBarProps> = ({ onSettingsClick, onDebugRefresh, currentU
   // Menu definitions moved after function declarations
   const menus: Record<string, MenuAction[]> = {
     'File': [
-      { label: 'New Project', action: () => console.log('New Project'), shortcut: 'Ctrl+N' },
+      { 
+        label: 'New',
+        submenu: [
+          { label: 'Organization', action: () => console.log('New Organization'), shortcut: 'Ctrl+Shift+O' },
+          { label: 'Project', action: () => console.log('New Project'), shortcut: 'Ctrl+Shift+P' },
+          { label: 'Book', action: () => console.log('New Book'), shortcut: 'Ctrl+Shift+B' },
+          { label: 'Chapter', action: () => console.log('New Chapter'), shortcut: 'Ctrl+Shift+C' },
+          { 
+            label: 'Page',
+            submenu: [
+              { label: 'Note', action: () => console.log('New Note'), shortcut: 'Ctrl+N' },
+              { label: 'Code', action: () => console.log('New Code'), shortcut: 'Ctrl+Alt+C' },
+              { label: 'Image', action: () => console.log('New Image'), shortcut: 'Ctrl+Alt+I' },
+              { label: 'PDF', action: () => console.log('New PDF'), shortcut: 'Ctrl+Alt+P' },
+              { label: 'Spreadsheet', action: () => console.log('New CSV'), shortcut: 'Ctrl+Alt+S' },
+              { label: 'Audio', action: () => console.log('New Audio'), shortcut: 'Ctrl+Alt+A' },
+              { label: 'Video', action: () => console.log('New Video'), shortcut: 'Ctrl+Alt+V' }
+            ]
+          }
+        ]
+      },
       { label: 'Open Project', action: () => console.log('Open Project'), shortcut: 'Ctrl+O' },
       { label: 'Save', action: () => console.log('Save'), shortcut: 'Ctrl+S' },
       { label: 'Save All', action: () => console.log('Save All'), shortcut: 'Ctrl+Shift+S' },
@@ -109,7 +129,9 @@ const TitleBar: FC<TitleBarProps> = ({ onSettingsClick, onDebugRefresh, currentU
       { label: 'Redo', action: () => console.log('Redo'), shortcut: 'Ctrl+Y' },
       { label: 'Cut', action: () => console.log('Cut'), shortcut: 'Ctrl+X' },
       { label: 'Copy', action: () => console.log('Copy'), shortcut: 'Ctrl+C' },
-      { label: 'Paste', action: () => console.log('Paste'), shortcut: 'Ctrl+V' }
+      { label: 'Paste', action: () => console.log('Paste'), shortcut: 'Ctrl+V' },
+      { label: 'Rename', action: () => console.log('Rename'), shortcut: 'F2' },
+      { label: 'Delete', action: () => console.log('Delete'), shortcut: 'Delete' }
     ],
     'View': [
       { label: 'Toggle Sidebar', action: () => console.log('Toggle Sidebar'), shortcut: 'Ctrl+B' },
@@ -125,14 +147,6 @@ const TitleBar: FC<TitleBarProps> = ({ onSettingsClick, onDebugRefresh, currentU
 
   return (
     <div className="custom-title-bar flex flex-row items-center h-8 bg-gray-900 text-white">
-      <div className="title-section flex items-center space-x-2 px-2">
-        <div className="app-icon">
-          <Icon name="app-icon-main" size={16} />
-        </div>
-        <div className="app-title text-sm">MotherCore</div>
-        <div className="app-version text-xs text-gray-400">v0.1.0</div>
-      </div>
-
       <div className="menu-bar flex items-center h-full">
         {Object.entries(menus).map(([menuName, items]) => (
           <div key={menuName} className="relative">
@@ -143,18 +157,44 @@ const TitleBar: FC<TitleBarProps> = ({ onSettingsClick, onDebugRefresh, currentU
               {menuName}
             </button>
             {activeMenu === menuName && (
-              <div className="absolute top-full left-0 bg-gray-800 shadow-lg rounded-b min-w-[200px] py-1 z-50">
+              <div className="dropdown-menu">
                 {items.map((item, index) => (
-                  <button
-                    key={index}
-                    className="w-full px-4 py-1.5 text-left hover:bg-gray-700 text-sm flex justify-between items-center"
-                    onClick={() => handleMenuItemClick(item.action)}
-                  >
-                    <span>{item.label}</span>
-                    {item.shortcut && (
-                      <span className="text-gray-400 text-xs ml-4">{item.shortcut}</span>
+                  <div key={index}>
+                    {item.submenu ? (
+                      <div className="submenu-item">
+                        <button
+                          className="w-full px-4 py-1.5 text-left hover:bg-gray-700 text-sm flex justify-between items-center"
+                        >
+                          <span>{item.label}</span>
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                        <div className="submenu absolute left-full top-0 bg-gray-900 border border-gray-700 rounded shadow-lg">
+                          {item.submenu.map((subItem, subIndex) => (
+                            <button
+                              key={subIndex}
+                              className="w-full px-4 py-1.5 text-left hover:bg-gray-700 text-sm flex justify-between items-center"
+                              onClick={() => handleMenuItemClick(subItem.action)}
+                            >
+                              <span>{subItem.label}</span>
+                              {subItem.shortcut && (
+                                <span className="text-gray-400 text-xs ml-4">{subItem.shortcut}</span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        className="w-full px-4 py-1.5 text-left hover:bg-gray-700 text-sm flex justify-between items-center"
+                        onClick={() => handleMenuItemClick(item.action)}
+                      >
+                        <span>{item.label}</span>
+                        {item.shortcut && (
+                          <span className="text-gray-400 text-xs ml-4">{item.shortcut}</span>
+                        )}
+                      </button>
                     )}
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
@@ -169,7 +209,13 @@ const TitleBar: FC<TitleBarProps> = ({ onSettingsClick, onDebugRefresh, currentU
           </button>
         )}
         {onSettingsClick && (
-          <button className="window-control p-2 hover:bg-gray-700" onClick={onSettingsClick}>
+          <button 
+            className="window-control p-2 hover:bg-gray-700" 
+            onClick={() => {
+              console.log('Settings button clicked');
+              if (onSettingsClick) onSettingsClick();
+            }}
+          >
             <Settings size={14} />
           </button>
         )}

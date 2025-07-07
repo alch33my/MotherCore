@@ -1,6 +1,6 @@
 import React from 'react'
 import { useState, useEffect } from 'react'
-import { ChevronRightIcon, ChevronDownIcon, FolderIcon, FileIcon, FileTextIcon, PlusIcon, RefreshCwIcon, InfoIcon } from 'lucide-react'
+import { ChevronRightIcon, ChevronDownIcon, FolderIcon, FileIcon, FileTextIcon, PlusIcon, RefreshCwIcon, InfoIcon, Pencil, Trash } from 'lucide-react'
 import Icon from '../ui/Icon'
 
 interface NavigationTreeProps {
@@ -14,9 +14,12 @@ interface NavigationTreeProps {
   onAddBook: (projectId: string) => void
   onAddChapter: (bookId: string) => void
   onAddPage: (chapterId: string) => void
+  onRename: (item: TreeNode) => void
+  onDelete: (item: TreeNode) => void
 }
 
-interface TreeNode {
+// Export the TreeNode interface
+export interface TreeNode {
   id: string
   name: string
   color?: string
@@ -31,6 +34,14 @@ interface TreeNode {
   chapter_id?: string
 }
 
+// Add context menu interface
+interface ContextMenuItem {
+  label: string;
+  action: () => void;
+  icon?: React.ReactNode;
+  divider?: boolean;
+}
+
 function NavigationTree({
   onSelectOrganization,
   onSelectProject,
@@ -42,11 +53,18 @@ function NavigationTree({
   onAddBook,
   onAddChapter,
   onAddPage,
+  onRename,
+  onDelete
 }: NavigationTreeProps) {
   const [organizations, setOrganizations] = useState<TreeNode[]>([])
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({})
   const [loading, setLoading] = useState<Record<string, boolean>>({})
   const [debugMode, setDebugMode] = useState(false)
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    items: ContextMenuItem[];
+  } | null>(null);
   
   // Load organizations ONCE on component mount
   useEffect(() => {
@@ -406,7 +424,7 @@ function NavigationTree({
       case 'project':
         return <FolderIcon size={16} style={{ color: color || '#ffb000' }} />
       case 'book':
-        return <Icon name="book-icon-greys" size={16} />
+        return <Icon name="book-icon-greys" size={120} className="--var(--color-text-primary)" />
       case 'chapter':
         return <FileIcon size={16} className="text-matrix-gold" />
       case 'page':
@@ -467,10 +485,14 @@ function NavigationTree({
     
     // Use CSS classes instead of Tailwind for proper layout
     const itemClass = `tree-item ${isExpanded ? 'expanded' : ''}`;
-    const indentStyle = { paddingLeft: `${depth * 20 + 12}px` };
+    const indentStyle = { paddingLeft: depth === 0 ? '0px' : depth === 1 ? '6px' : `${depth * 6}px` };
     
     return (
-      <div key={node.id} className="tree-item-container">
+      <div 
+        key={node.id}
+        className={`tree-node ${node.type}`}
+        onContextMenu={(e) => handleContextMenu(e, node)}
+      >
         <div 
           className={itemClass}
           style={indentStyle}
@@ -510,7 +532,8 @@ function NavigationTree({
             {debugMode && (
               <button
                 className="tree-action-btn debug-btn"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   console.log('Debug info for node:', node);
                   if (node.type === 'organization') {
                     checkOrganizationProjects(node.id);
@@ -525,7 +548,10 @@ function NavigationTree({
             {node.type !== 'page' && (
               <button
                 className="tree-action-btn add-btn"
-                onClick={() => handleAdd(node)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleAdd(node)
+                }}
                 title={`Add to ${node.type}`}
               >
                 <PlusIcon size={12} />
@@ -548,6 +574,76 @@ function NavigationTree({
         )}
       </div>
     )
+  }
+
+  // Add context menu handler
+  const handleContextMenu = (e: React.MouseEvent, node: TreeNode) => {
+    e.preventDefault()
+    
+    const menuItems: ContextMenuItem[] = [
+      {
+        label: 'Rename',
+        action: () => handleRename(node),
+        icon: <Pencil className="w-4 h-4" />
+      },
+      {
+        label: 'Delete',
+        action: () => handleDelete(node),
+        icon: <Trash className="w-4 h-4" />,
+        divider: true
+      }
+    ]
+
+    // Add type-specific actions
+    switch (node.type) {
+      case 'organization':
+        menuItems.unshift({
+          label: 'New Project',
+          action: () => onAddProject(node.id),
+          icon: <PlusIcon className="w-4 h-4" />
+        })
+        break
+      case 'project':
+        menuItems.unshift({
+          label: 'New Book',
+          action: () => onAddBook(node.id),
+          icon: <PlusIcon className="w-4 h-4" />
+        })
+        break
+      case 'book':
+        menuItems.unshift({
+          label: 'New Chapter',
+          action: () => onAddChapter(node.id),
+          icon: <PlusIcon className="w-4 h-4" />
+        })
+        break
+      case 'chapter':
+        menuItems.unshift({
+          label: 'New Page',
+          action: () => onAddPage(node.id),
+          icon: <PlusIcon className="w-4 h-4" />
+        })
+        break
+    }
+
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      items: menuItems
+    })
+  }
+
+  // Add these functions
+  const handleRename = (item: TreeNode) => {
+    if (onRename) {
+      onRename(item)
+    }
+  }
+
+  const handleDelete = (item: TreeNode) => {
+    if (onDelete) {
+      onDelete(item)
+    }
   }
 
   // Modified render function with debug controls
@@ -623,6 +719,31 @@ function NavigationTree({
               {JSON.stringify(organizations, null, 2)}
             </pre>
           </details>
+        </div>
+      )}
+
+      {/* Context menu component */}
+      {contextMenu && (
+        <div
+          className="fixed bg-surface border border-border rounded shadow-lg z-50"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+        >
+          {contextMenu.items.map((item, index) => (
+            <React.Fragment key={index}>
+              <button
+                className="w-full px-4 py-2 text-left hover:bg-primary/10 flex items-center gap-2"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  item.action();
+                  setContextMenu(null);
+                }}
+              >
+                {item.icon}
+                <span>{item.label}</span>
+              </button>
+              {item.divider && <div className="border-t border-border my-1" />}
+            </React.Fragment>
+          ))}
         </div>
       )}
     </div>
