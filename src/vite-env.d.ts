@@ -96,6 +96,10 @@ interface Window {
     
     // Logging
     logError: (message: string) => void;
+    
+    // Settings
+    getSettingsGroup: (category: string) => Promise<Record<string, string>>
+    updateSetting: (category: string, key: string, value: string) => Promise<boolean>
   }
 }
 

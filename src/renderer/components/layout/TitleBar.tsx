@@ -146,8 +146,8 @@ const TitleBar: FC<TitleBarProps> = ({ onSettingsClick, onDebugRefresh, currentU
   };
 
   return (
-    <div className="custom-title-bar flex flex-row items-center h-8 bg-gray-900 text-white">
-      <div className="menu-bar flex items-center h-full">
+    <div className="custom-title-bar flex flex-row items-center h-8 bg-gray-900 text-white" style={{ WebkitAppRegion: 'drag' }}>
+      <div className="menu-bar flex items-center h-full" style={{ WebkitAppRegion: 'no-drag' }}>
         {Object.entries(menus).map(([menuName, items]) => (
           <div key={menuName} className="relative">
             <button
@@ -202,7 +202,7 @@ const TitleBar: FC<TitleBarProps> = ({ onSettingsClick, onDebugRefresh, currentU
         ))}
       </div>
 
-      <div className="window-controls flex items-center ml-auto">
+      <div className="window-controls flex items-center ml-auto" style={{ WebkitAppRegion: 'no-drag' }}>
         {showDebugTools && (
           <button className="window-control p-2 hover:bg-gray-700" onClick={onDebugRefresh}>
             <RefreshCw size={14} />

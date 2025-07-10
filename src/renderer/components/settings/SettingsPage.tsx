@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Monitor, 
   Palette, 
@@ -54,6 +54,23 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [showIconTester, setShowIconTester] = useState(false);
 
+  // Load profile data on mount
+  useEffect(() => {
+    const loadProfileData = async () => {
+      try {
+        if (!window.electronAPI) return;
+        const settings = await window.electronAPI.getSettingsGroup('profile');
+        setProfileData({
+          displayName: settings.name || '',
+          email: settings.email || ''
+        });
+      } catch (err) {
+        console.error('Failed to load profile:', err);
+      }
+    };
+    loadProfileData();
+  }, []);
+
   const navigationItems = [
     { id: 'profile' as SettingsSection, label: 'Profile', icon: User },
     { id: 'appearance' as SettingsSection, label: 'Appearance', icon: Palette },
@@ -66,6 +83,21 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
 
   const updateSetting = (key: string, value: any) => {
     setSettings(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleSaveProfile = async () => {
+    if (!window.electronAPI) return;
+    setIsSaving(true);
+    try {
+      await window.electronAPI.updateSetting('profile', 'name', profileData.displayName);
+      await window.electronAPI.updateSetting('profile', 'email', profileData.email);
+      alert('Profile saved successfully!');
+    } catch (err) {
+      console.error('Failed to save profile:', err);
+      alert('Failed to save profile. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const renderContent = () => {
@@ -98,18 +130,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
               <div className="setting-item">
                 <button 
                   className="btn btn-primary"
-                  onClick={async () => {
-                    setIsSaving(true);
-                    try {
-                      localStorage.setItem('mothercore-profile', JSON.stringify(profileData));
-                      alert('Profile saved successfully!');
-                    } catch (err) {
-                      console.error('Failed to save profile:', err);
-                      alert('Failed to save profile. Please try again.');
-                    } finally {
-                      setIsSaving(false);
-                    }
-                  }}
+                  onClick={handleSaveProfile}
                   disabled={isSaving}
                 >
                   {isSaving ? 'Saving...' : 'Save Profile'}

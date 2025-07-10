@@ -182,3 +182,13 @@ html, body, #root {
 .read-the-docs {
   color: #888;
 }
+
+/* Title bar draggable region */
+.custom-title-bar {
+  -webkit-app-region: drag;
+}
+
+.custom-title-bar .menu-bar,
+.custom-title-bar .window-controls {
+  -webkit-app-region: no-drag;
+}

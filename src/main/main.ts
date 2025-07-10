@@ -3,7 +3,7 @@ import { fileURLToPath } from 'url'
 import path from 'path'
 import bcryptjs from 'bcryptjs'
 import DatabaseManager from './database'
-import { SecureUpdateManager } from './update-manager'
+import { UpdateManager } from './update-manager'
 
 // Workaround for __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url)
@@ -12,7 +12,7 @@ const __dirname = path.dirname(__filename)
 // Store main window reference
 let mainWindow: BrowserWindow | null = null
 let dbManager: DatabaseManager
-let updateManager: SecureUpdateManager
+let updateManager: UpdateManager
 
 function createWindow() {
   // Initialize database before creating the window
@@ -110,7 +110,7 @@ function initializeDatabase() {
 // Initialize the update manager
 function initializeUpdateManager() {
   try {
-    updateManager = new SecureUpdateManager(dbManager)
+    updateManager = new UpdateManager(dbManager)
     console.log('Update manager initialized successfully')
   } catch (err) {
     console.error('Failed to initialize update manager:', err)
@@ -175,54 +175,46 @@ function setupIpcHandlers() {
     }
   })
   
-  // IPC handlers for update system
-  ipcMain.handle('get-update-settings', async () => {
+  // Update manager IPC handlers
+  ipcMain.handle('updates:get-settings', () => {
     try {
-      const settings = updateManager.getSettings()
-      return { success: true, settings }
+      return updateManager.loadSettings()
     } catch (err) {
       console.error('Error getting update settings:', err)
-      return { success: false, error: 'Failed to get update settings' }
+      return null
     }
   })
-  
-  ipcMain.handle('save-update-settings', async (_, settings) => {
+
+  ipcMain.handle('updates:save-settings', (_, settings) => {
     try {
-      const result = updateManager.saveSettings(settings)
-      return { success: result }
+      return updateManager.saveSettings(settings)
     } catch (err) {
       console.error('Error saving update settings:', err)
-      return { success: false, error: 'Failed to save update settings' }
+      return false
     }
   })
-  
-  ipcMain.handle('check-for-updates', async (_, userRequested) => {
+
+  ipcMain.handle('updates:check', () => {
     try {
-      const updateInfo = await updateManager.checkForUpdates(userRequested)
-      return { success: !!updateInfo, updateInfo }
+      updateManager.checkForUpdates()
     } catch (err) {
       console.error('Error checking for updates:', err)
-      return { success: false, error: 'Failed to check for updates' }
     }
   })
-  
-  ipcMain.handle('download-update', async (_, updateInfo) => {
+
+  ipcMain.handle('updates:download', () => {
     try {
-      const downloadPath = await updateManager.downloadUpdate(updateInfo)
-      return { success: !!downloadPath, downloadPath }
+      updateManager.downloadUpdate()
     } catch (err) {
       console.error('Error downloading update:', err)
-      return { success: false, error: 'Failed to download update' }
     }
   })
-  
-  ipcMain.handle('install-update', async (_, userApproved) => {
+
+  ipcMain.handle('updates:install', () => {
     try {
-      const result = await updateManager.installUpdate(userApproved)
-      return { success: result }
+      updateManager.installUpdate()
     } catch (err) {
       console.error('Error installing update:', err)
-      return { success: false, error: 'Failed to install update' }
     }
   })
 
@@ -515,4 +507,23 @@ function setupIpcHandlers() {
       return { success: false, error: String(err) };
     }
   });
+
+  // Settings IPC handlers
+  ipcMain.handle('settings:get-group', (_, category) => {
+    try {
+      return dbManager.getSettingsGroup(category)
+    } catch (err) {
+      console.error('Error getting settings group:', err)
+      return {}
+    }
+  })
+
+  ipcMain.handle('settings:update', (_, category, key, value) => {
+    try {
+      return dbManager.updateSetting(category, key, value)
+    } catch (err) {
+      console.error('Error updating setting:', err)
+      return false
+    }
+  })
 } 

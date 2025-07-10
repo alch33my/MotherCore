@@ -291,6 +291,33 @@ class DatabaseManager {
       )
     `).run()
 
+    // Settings table for application configuration
+    this.db.prepare(`
+      CREATE TABLE IF NOT EXISTS settings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        category TEXT NOT NULL,
+        key TEXT NOT NULL,
+        value TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(category, key)
+      )
+    `).run()
+
+    // Insert default settings if they don't exist
+    this.db.prepare(`
+      INSERT OR IGNORE INTO settings (category, key, value) VALUES
+      ('updates', 'autoCheck', 'false'),
+      ('updates', 'checkOnStartup', 'false'),
+      ('theme', 'matrixIntensity', '60'),
+      ('theme', 'matrixSpeed', '50'),
+      ('theme', 'matrixColorScheme', 'gold'),
+      ('theme', 'matrixDensity', '40'),
+      ('profile', 'name', ''),
+      ('profile', 'email', ''),
+      ('profile', 'avatar', '')
+    `).run()
+
     // Organizations table
     this.db.prepare(`
       CREATE TABLE IF NOT EXISTS organizations (

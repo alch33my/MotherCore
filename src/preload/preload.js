@@ -52,11 +52,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('update-page-content', pageId, content, contentText),
   
   // Updates
-  getUpdateSettings: () => ipcRenderer.invoke('get-update-settings'),
-  saveUpdateSettings: (settings) => ipcRenderer.invoke('save-update-settings', settings),
-  checkForUpdates: (userRequested = true) => ipcRenderer.invoke('check-for-updates', userRequested),
-  downloadUpdate: (updateInfo) => ipcRenderer.invoke('download-update', updateInfo),
-  installUpdate: (userApproved) => ipcRenderer.invoke('install-update', userApproved),
+  getUpdateSettings: () => ipcRenderer.invoke('updates:get-settings'),
+  saveUpdateSettings: (settings) => ipcRenderer.invoke('updates:save-settings', settings),
+  checkForUpdates: () => ipcRenderer.invoke('updates:check'),
+  downloadUpdate: () => ipcRenderer.invoke('updates:download'),
+  installUpdate: () => ipcRenderer.invoke('updates:install'),
   
   // File system dialogs
   openFileDialog: (options) => ipcRenderer.invoke('open-file-dialog', options),
@@ -69,7 +69,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   logError: (errorMessage) => ipcRenderer.invoke('log-error', errorMessage),
   
   // SVG icon loading
-  readSVGFile: (filePath) => ipcRenderer.invoke('read-svg-file', filePath)
+  readSVGFile: (filePath) => ipcRenderer.invoke('read-svg-file', filePath),
+  
+  // Settings
+  getSettingsGroup: (category) => ipcRenderer.invoke('settings:get-group', category),
+  updateSetting: (category, key, value) => ipcRenderer.invoke('settings:update', category, key, value)
 })
 
 console.log('Electron API exposed successfully') 
