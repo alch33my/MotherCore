@@ -259,7 +259,7 @@ const MainContent = forwardRef<MainContentRef, MainContentProps>((props, ref) =>
   const getFileType = (item: any): Tab['type'] => {
     if (!item) return 'note'
     
-    // First check the page_type property
+    // If we have page_type, use it
     if (item.page_type) {
       const type = item.page_type.toLowerCase()
       switch (type) {
@@ -273,7 +273,7 @@ const MainContent = forwardRef<MainContentRef, MainContentProps>((props, ref) =>
       }
     }
     
-    // If no page_type, try to determine from metadata
+    // If no page_type but we have metadata, try to infer
     if (item.metadata) {
       try {
         const metadata = typeof item.metadata === 'string' 
@@ -292,6 +292,7 @@ const MainContent = forwardRef<MainContentRef, MainContentProps>((props, ref) =>
       }
     }
     
+    // Default to note
     return 'note'
   };
   

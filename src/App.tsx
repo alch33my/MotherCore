@@ -371,6 +371,29 @@ function App() {
   // Add ref to MainContent
   const mainContentRef = useRef<{ openSettingsTab: (props: any) => void } | null>(null);
 
+  // In App.tsx - ADD THESE HANDLERS
+  const handleCreateOrganization = () => {
+    setShowCreateOrgForm(true);
+  };
+
+  const handleCreateProject = () => {
+    setActiveOrgId(selectedItem?.id);
+    setShowCreateProjectForm(true);
+  };
+
+  const handleCreateBook = () => {
+    setActiveProjectId(selectedItem?.id);
+    setShowCreateBookForm(true);
+  };
+
+  // Then pass these to Sidebar
+  // <Sidebar 
+  //   onSelectItem={handleSelectItem}
+  //   onCreateOrganization={handleCreateOrganization}
+  //   onCreateProject={handleCreateProject}
+  //   // ... etc
+  // />
+
   function renderToasts() {
     return (
       <div className="fixed top-4 right-4 z-50 flex flex-col gap-2">
