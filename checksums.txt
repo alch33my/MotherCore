@@ -1,0 +1,2 @@
+1a077ef60ddd7578ada1a8db0d30f353a685c221094cceb4bf593fef84d605c4  /tmp/mothercore-release/MotherCore-0.0.1.AppImage
+1b70d00f24d7e09aa829dad68ff03a41e67387a9fcbc41407f80cfe2279be491  /tmp/mothercore-release/mothercore_0.0.1_amd64.deb

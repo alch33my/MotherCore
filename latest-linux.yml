@@ -1,0 +1,12 @@
+version: 0.0.1
+files:
+  - url: MotherCore-0.0.1.AppImage
+    sha512: ozN+Uwkv0fVh3UX5HPuE32mgtHT9Jmc/v4eAi2FuNX9SxynW4K3t33/L1/dXn0D8zmeYRZlySFp0JpboYZIsPQ==
+    size: 222509901
+    blockMapSize: 232289
+  - url: mothercore_0.0.1_amd64.deb
+    sha512: bi7VAradIIMAw+I1wehk7Imc1nStz6zuQ9MVP7rpaR9F3eHL8YzmNW5kRk3+qvwPM6b/PKSy2wynJyVq8ISkGw==
+    size: 153348138
+path: MotherCore-0.0.1.AppImage
+sha512: ozN+Uwkv0fVh3UX5HPuE32mgtHT9Jmc/v4eAi2FuNX9SxynW4K3t33/L1/dXn0D8zmeYRZlySFp0JpboYZIsPQ==
+releaseDate: '2025-08-07T19:50:26.851Z'
